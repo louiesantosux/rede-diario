@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { ColorPicker } from '@/components/ColorPicker';
 import { contrastLevel, contrastRatio } from '@/lib/contrast';
 import { DEFAULT_PREFS, PREFS_KEY, THEME_OPTIONS, applyPrefs, type A11yPrefs, type ThemeId } from '@/lib/prefs';
 import {
@@ -126,10 +127,7 @@ export function SiteAppearance({ userId, savedUi, savedA11y }: Props) {
               onClick={() => set('accent', c.hex)}
             />
           ))}
-          <label className="swatch swatch--custom" title="Outra cor">
-            <span className="sr-only">Outra cor de destaque</span>
-            <input type="color" value={ui.accent ?? '#0a4c8c'} onChange={(e) => set('accent', e.target.value)} />
-          </label>
+          <ColorPicker compact label="Outra cor de destaque" value={ui.accent ?? '#0a4c8c'} onChange={(hex) => set('accent', hex)} />
         </div>
         <small className="muted">
           Botões, links, abas e barras de título.
@@ -163,10 +161,7 @@ export function SiteAppearance({ userId, savedUi, savedA11y }: Props) {
               onClick={() => set('wallpaper', c.hex)}
             />
           ))}
-          <label className="swatch swatch--custom" title="Outra cor">
-            <span className="sr-only">Outra cor de papel de parede</span>
-            <input type="color" value={ui.wallpaper ?? '#cfe3f5'} onChange={(e) => set('wallpaper', e.target.value)} />
-          </label>
+          <ColorPicker compact label="Outra cor de papel de parede" value={ui.wallpaper ?? '#cfe3f5'} onChange={(hex) => set('wallpaper', hex)} />
         </div>
       </fieldset>
 

@@ -8,15 +8,21 @@ import { getMediaViews, orderedViews } from '@/lib/media';
 import { createClient } from '@/lib/supabase/server';
 import { docMediaIds, isPostBody, sanitizeDoc } from '@/lib/richtext';
 import { ReplyForm } from './ReplyForm';
+import { DeletePost } from './DeletePost';
+import { Notice } from '@/components/Notice';
 
 export const metadata: Metadata = { title: 'Post' };
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
 const dateFmt = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Sao_Paulo' });
 
-export default async function PostPage({ params }: Props) {
+export default async function PostPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const sp = await searchParams;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   const userId = auth.user!.id;
@@ -86,6 +92,12 @@ export default async function PostPage({ params }: Props) {
           {p.mission && <p className="post__mission">Missão: {p.mission.prompt}</p>}
           {doc ? <RichText doc={doc} media={mediaViews} /> : <p>{isPostBody(p.body) ? p.body.text : ''}</p>}
           <MediaGallery items={orderedViews(mediaIds.filter((m) => !inline.includes(m)), mediaViews)} />
+          {mine && (
+            <>
+              <Notice error={sp.erro === 'excluir' ? 'Não foi possível apagar o post. Tente novamente.' : undefined} />
+              <DeletePost postId={p.id} />
+            </>
+          )}
         </article>
       </Window>
 

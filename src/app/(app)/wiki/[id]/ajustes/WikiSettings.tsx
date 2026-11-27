@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { Window } from '@/components/Window';
 import { Notice } from '@/components/Notice';
+import { ColorPicker } from '@/components/ColorPicker';
 import { contrastLevel } from '@/lib/contrast';
 import {
   FONTS,
@@ -94,13 +95,7 @@ export function WikiSettings({ wiki, confirmError }: Props) {
                 <legend>Cores</legend>
                 <div className="color-grid">
                   {COLOR_FIELDS.map((f) => (
-                    <label key={f.key} className="color-field">
-                      <input type="color" value={theme[f.key]} onChange={(e) => set(f.key, e.target.value)} />
-                      <span>
-                        {f.label}
-                        <code>{theme[f.key]}</code>
-                      </span>
-                    </label>
+                    <ColorPicker key={f.key} label={f.label} value={theme[f.key]} onChange={(hex) => set(f.key, hex)} />
                   ))}
                 </div>
               </fieldset>

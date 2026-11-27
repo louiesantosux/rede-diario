@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 import { docMediaIds, docText, MAX_INLINE_IMAGES, sanitizeDoc } from '@/lib/richtext';
 import { parseYouTubeId } from '@/lib/youtube';
 import {
+  BG_FITS,
+  clampOpacity,
   BIO_MAX,
   MOOD_MAX,
   NAME_MAX,
@@ -14,7 +16,9 @@ import {
   type SpaceTheme,
 } from '@/lib/space';
 
-export type FormState = { error?: string; ok?: string } | undefined;
+export type FormState = { error?: string; ok?: string; username?: string } | undefined;
+
+const USERNAME_RE = /^[a-z0-9_.]{3,24}$/;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const str = (form: FormData, key: string, max: number) => String(form.get(key) ?? '').trim().slice(0, max);
@@ -55,11 +59,16 @@ export async function saveSpace(_prev: FormState, form: FormData): Promise<FormS
   const userId = auth.user?.id;
   if (!userId) return { error: 'Sua sessão expirou. Entre de novo.' };
 
-  // Perfil
+  // Perfil (o @ é único; a checagem final é do índice do banco)
+  const username = str(form, 'username', 40).replace(/^@/, '').toLowerCase();
+  if (!USERNAME_RE.test(username)) {
+    return { error: 'O @ precisa ter de 3 a 24 caracteres: letras minúsculas sem acento, números, ponto ou sublinhado.' };
+  }
   const visibility = form.get('profileVisibility') === 'public' ? 'public' : 'friends';
   const { error: profileError } = await supabase
     .from('profiles')
     .update({
+      username,
       display_name: str(form, 'displayName', NAME_MAX),
       mood: str(form, 'mood', MOOD_MAX),
       bio: str(form, 'bio', BIO_MAX),
@@ -68,6 +77,7 @@ export async function saveSpace(_prev: FormState, form: FormData): Promise<FormS
     .eq('id', userId);
   if (profileError) {
     console.error('[saveSpace/profile]', profileError.code, profileError.message);
+    if (profileError.code === '23505') return { error: `O @${username} já está em uso. Escolha outro.` };
     return { error: 'Não foi possível salvar o perfil. Tente novamente.' };
   }
 
@@ -117,7 +127,50 @@ export async function saveSpace(_prev: FormState, form: FormData): Promise<FormS
 
   revalidatePath('/meu-espaco');
   revalidatePath('/u/[username]', 'page');
-  return { ok: 'Espaço salvo.' };
+  return { ok: 'Espaço salvo.', username };
+}
+
+/* ------------------------------------------------------------------ */
+/* Foto e fundo: salvos assim que escolhidos                           */
+/* ------------------------------------------------------------------ */
+
+export type SpaceMediaInput = {
+  avatar?: string | null;
+  bg?: string | null;
+  bgFit?: string;
+  bgOpacity?: number;
+};
+
+export async function saveSpaceMedia(input: SpaceMediaInput): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id;
+  if (!userId) return { ok: false, error: 'Sua sessão expirou. Entre de novo.' };
+
+  const idOrNull = (v: unknown) => (typeof v === 'string' && UUID_RE.test(v) ? v : null);
+  const patch: Record<string, unknown> = {};
+  if ('avatar' in input) patch.avatar_media_id = idOrNull(input.avatar);
+  if ('bg' in input) patch.bg_media_id = idOrNull(input.bg);
+
+  if ('bgFit' in input || 'bgOpacity' in input) {
+    const { data: current } = await supabase.from('spaces').select('theme').eq('owner_id', userId).maybeSingle();
+    const theme = sanitizeSpaceTheme(current?.theme);
+    if ('bgFit' in input && (BG_FITS as readonly string[]).includes(String(input.bgFit))) {
+      theme.bgFit = input.bgFit as SpaceTheme['bgFit'];
+    }
+    if ('bgOpacity' in input) theme.bgOpacity = clampOpacity(input.bgOpacity);
+    patch.theme = theme;
+  }
+  if (Object.keys(patch).length === 0) return { ok: true };
+
+  const { error } = await supabase.from('spaces').update(patch).eq('owner_id', userId);
+  if (error) {
+    console.error('[saveSpaceMedia]', error.code, error.message);
+    return { ok: false, error: 'Não foi possível salvar a imagem. Tente de novo.' };
+  }
+  revalidatePath('/meu-espaco');
+  revalidatePath('/u/[username]', 'page');
+  return { ok: true };
 }
 
 /* ------------------------------------------------------------------ */

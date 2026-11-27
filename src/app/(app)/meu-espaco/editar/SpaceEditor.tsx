@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Window } from '@/components/Window';
 import { Notice } from '@/components/Notice';
+import { ColorPicker } from '@/components/ColorPicker';
 import { Icon } from '@/components/Icon';
 import { RichEditor } from '@/components/editor/RichEditor';
 import { ImagePicker } from '@/components/wiki/ImagePicker';
@@ -27,7 +28,8 @@ import {
   type SpaceTheme,
 } from '@/lib/space';
 import { BG_MUSIC_MAX_VOLUME } from '@/lib/pageSettings';
-import { saveSpace, type FormState } from '../actions';
+import { saveSpace, saveSpaceMedia, type FormState, type SpaceMediaInput } from '../actions';
+import { bgLayers } from '@/lib/space';
 import { ModuleList } from './ModuleList';
 
 type Props = {
@@ -81,19 +83,36 @@ export function SpaceEditor(props: Props) {
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty]);
 
+  // Foto e fundo são salvos na hora em que são escolhidos.
+  const [mediaStatus, setMediaStatus] = useState('');
+  const persistMedia = async (input: SpaceMediaInput, done: string) => {
+    setMediaStatus('Salvando…');
+    const res = await saveSpaceMedia(input);
+    setMediaStatus(res.ok ? done : res.error ?? 'Não foi possível salvar.');
+  };
+
   const choose = async (kind: 'avatar' | 'bg', ids: string[]) => {
-    const id = ids[ids.length - 1];
+    const id = ids[ids.length - 1] ?? null;
     setPicking(null);
-    setDirty(true);
     if (!id) {
       if (kind === 'avatar') setAvatar(null);
       else setBg(null);
-      return;
+    } else {
+      const urls = await signedUrls(createClient(), [id]);
+      const value = { id, url: urls[id] ?? '' };
+      if (kind === 'avatar') setAvatar(value);
+      else setBg(value);
     }
-    const urls = await signedUrls(createClient(), [id]);
-    const value = { id, url: urls[id] ?? '' };
-    if (kind === 'avatar') setAvatar(value);
-    else setBg(value);
+    const label = kind === 'avatar' ? 'Foto do perfil' : 'Fundo';
+    void persistMedia(kind === 'avatar' ? { avatar: id } : { bg: id }, id ? `${label} salvo.` : `${label} removido.`);
+  };
+
+  // Ajustes do fundo: aplica na hora e salva meio segundo depois da última mudança.
+  const bgTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const setBgOption = (patch: Partial<Pick<SpaceTheme, 'bgFit' | 'bgOpacity'>>) => {
+    setTheme((t) => ({ ...t, ...patch }));
+    if (bgTimer.current) clearTimeout(bgTimer.current);
+    bgTimer.current = setTimeout(() => void persistMedia(patch, 'Ajuste do fundo salvo.'), 500);
   };
 
   const submit = (form: FormData) => {
@@ -112,11 +131,39 @@ export function SpaceEditor(props: Props) {
         <div className="stack">
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <Link href="/meu-espaco">← Voltar para Meu espaço</Link>
-            <Link href={`/u/${props.username}`}>Ver como fica</Link>
+            <Link href={`/u/${state?.username ?? props.username}`}>Ver como fica</Link>
           </div>
 
           <div className="row" style={{ alignItems: 'flex-end' }}>
-            <div className="field" style={{ flex: '1 1 240px' }}>
+            <div className="field" style={{ flex: '1 1 200px' }}>
+              <label htmlFor="username">Seu @</label>
+              <div className="input-prefix">
+                <span aria-hidden="true">@</span>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  required
+                  minLength={3}
+                  maxLength={24}
+                  pattern="[a-z0-9_.]{3,24}"
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  spellCheck={false}
+                  defaultValue={props.username}
+                  aria-describedby="username-help"
+                  onInput={(e) => {
+                    const el = e.currentTarget;
+                    el.value = el.value.toLowerCase().replace(/^@/, '');
+                  }}
+                />
+              </div>
+              <small id="username-help" className="muted">
+                3 a 24 caracteres: letras minúsculas sem acento, números, ponto ou sublinhado. Links antigos para o
+                seu espaço deixam de funcionar.
+              </small>
+            </div>
+            <div className="field" style={{ flex: '1 1 220px' }}>
               <label htmlFor="displayName">Nome de exibição</label>
               <input
                 id="displayName"
@@ -175,10 +222,20 @@ export function SpaceEditor(props: Props) {
           </div>
           <div className="stack">
             <p className="space-media-pick__title">Imagem de fundo</p>
-            <span className="space-bg-thumb" aria-hidden="true">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {bg?.url && <img src={bg.url} alt="" />}
-            </span>
+            {bg?.url ? (
+              <div
+                className={`space-bg-preview${theme.bgFit === 'repetir' ? ' space-bg-preview--repetir' : ''}`}
+                style={{ '--space-bg-img': bgLayers(bg.url, theme.bgOpacity) } as CSSProperties}
+                role="img"
+                aria-label={`Prévia do fundo com ${theme.bgOpacity}% de opacidade sobre preto`}
+              >
+                <span className="space-bg-preview__card" aria-hidden="true">
+                  Prévia do fundo
+                </span>
+              </div>
+            ) : (
+              <span className="space-bg-thumb" aria-hidden="true" />
+            )}
             <div className="row">
               <button type="button" className="btn" onClick={() => setPicking(picking === 'bg' ? null : 'bg')}>
                 {bg ? 'Trocar fundo' : 'Escolher fundo'}
@@ -190,30 +247,50 @@ export function SpaceEditor(props: Props) {
               )}
             </div>
             {bg && (
-              <div className="field">
-                <label htmlFor="bgFit">Como mostrar</label>
-                <select id="bgFit" value={theme.bgFit} onChange={(e) => set('bgFit', e.target.value as SpaceTheme['bgFit'])}>
-                  {BG_FITS.map((f) => (
-                    <option key={f} value={f}>
-                      {BG_FIT_LABEL[f]}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <>
+                <div className="field">
+                  <label htmlFor="bgOpacity">
+                    Opacidade da imagem: {theme.bgOpacity}%
+                  </label>
+                  <input
+                    id="bgOpacity"
+                    type="range"
+                    min={10}
+                    max={100}
+                    step={5}
+                    value={theme.bgOpacity}
+                    onChange={(e) => setBgOption({ bgOpacity: Number(e.target.value) })}
+                    aria-describedby="bgOpacity-help"
+                  />
+                  <small id="bgOpacity-help" className="muted">
+                    O fundo por trás da imagem é preto (#000000): quanto menor a opacidade, mais escura ela fica.
+                  </small>
+                </div>
+                <div className="field">
+                  <label htmlFor="bgFit">Como mostrar</label>
+                  <select
+                    id="bgFit"
+                    value={theme.bgFit}
+                    onChange={(e) => setBgOption({ bgFit: e.target.value as SpaceTheme['bgFit'] })}
+                  >
+                    {BG_FITS.map((f) => (
+                      <option key={f} value={f}>
+                        {BG_FIT_LABEL[f]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
             )}
           </div>
         </div>
         {picking && (
           <div className="space-picker" role="group" aria-label={picking === 'avatar' ? 'Escolher foto do perfil' : 'Escolher fundo'}>
-            <ImagePicker
-              selected={[]}
-              max={1}
-              onChange={(ids) => void choose(picking, ids)}
-            />
+            <ImagePicker selected={[]} max={1} onChange={(ids) => void choose(picking, ids)} />
           </div>
         )}
-        <p className="muted" style={{ margin: '12px 0 0', fontSize: '0.875rem' }}>
-          Foto e fundo aparecem para todos que podem abrir seu espaço.
+        <p className="autosave" role="status" aria-live="polite">
+          {mediaStatus || 'Foto e fundo são salvos assim que você escolhe. Aparecem para todos que podem abrir seu espaço.'}
         </p>
       </Window>
 
@@ -281,13 +358,7 @@ export function SpaceEditor(props: Props) {
               <legend>Cores</legend>
               <div className="color-grid">
                 {COLOR_FIELDS.map((f) => (
-                  <label key={f.key} className="color-field">
-                    <input type="color" value={theme[f.key]} onChange={(e) => set(f.key, e.target.value)} />
-                    <span>
-                      {f.label}
-                      <code>{theme[f.key]}</code>
-                    </span>
-                  </label>
+                  <ColorPicker key={f.key} label={f.label} value={theme[f.key]} onChange={(hex) => set(f.key, hex)} />
                 ))}
               </div>
             </fieldset>

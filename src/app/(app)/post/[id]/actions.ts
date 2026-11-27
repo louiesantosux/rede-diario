@@ -1,5 +1,6 @@
 'use server';
 
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
 export type ReplyState = { error?: string; ok?: boolean } | undefined;
@@ -20,4 +21,18 @@ export async function sendReply(_prev: ReplyState, form: FormData): Promise<Repl
     return { error: 'Não foi possível enviar. O autor pode ter restringido as respostas.' };
   }
   return { ok: true };
+}
+
+/** Apaga um post do próprio autor. As respostas vão junto; as imagens continuam na galeria. */
+export async function deletePost(form: FormData) {
+  const postId = String(form.get('postId') ?? '');
+  if (!UUID_RE.test(postId)) redirect('/inicio');
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  const { error } = await supabase.from('posts').delete().eq('id', postId).eq('author_id', auth.user?.id ?? '');
+  if (error) {
+    console.error('[deletePost]', error.code, error.message);
+    redirect(`/post/${postId}?erro=excluir`);
+  }
+  redirect('/inicio?aviso=post-excluido');
 }

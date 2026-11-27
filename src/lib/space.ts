@@ -98,6 +98,8 @@ export type SpaceTheme = WikiTheme & {
   window: (typeof WINDOW_STYLES)[number];
   corners: (typeof CORNERS)[number];
   bgFit: (typeof BG_FITS)[number];
+  /** Opacidade da imagem de fundo sobre preto (#000000), de 10 a 100. */
+  bgOpacity: number;
   bgMusic: { youtubeId: string; title: string } | null;
 };
 
@@ -106,8 +108,12 @@ export const DEFAULT_SPACE_THEME: SpaceTheme = {
   window: 'aero',
   corners: 'suaves',
   bgFit: 'cobrir',
+  bgOpacity: 100,
   bgMusic: null,
 };
+
+export const clampOpacity = (v: unknown) =>
+  typeof v === 'number' && Number.isFinite(v) ? Math.round(Math.min(100, Math.max(10, v))) : 100;
 
 const pick = <T extends string>(v: unknown, list: readonly T[], fallback: T): T =>
   list.includes(v as T) ? (v as T) : fallback;
@@ -120,6 +126,7 @@ export function sanitizeSpaceTheme(raw: unknown): SpaceTheme {
     window: pick(r.window, WINDOW_STYLES, DEFAULT_SPACE_THEME.window),
     corners: pick(r.corners, CORNERS, DEFAULT_SPACE_THEME.corners),
     bgFit: pick(r.bgFit, BG_FITS, DEFAULT_SPACE_THEME.bgFit),
+    bgOpacity: clampOpacity(r.bgOpacity),
     bgMusic:
       m && isYouTubeId(m.youtubeId)
         ? { youtubeId: m.youtubeId, title: typeof m.title === 'string' ? m.title.slice(0, 200) : 'Música de fundo' }
@@ -136,8 +143,14 @@ export function spaceStyle(t: SpaceTheme, bgUrl?: string | null): CSSProperties 
     ...themeStyle(t),
     '--w-on-accent': onAccent,
     '--w-radius': RADIUS[t.corners],
-    ...(bgUrl ? { '--space-bg-img': `url("${bgUrl.replace(/["\\]/g, '')}")` } : {}),
+    ...(bgUrl ? { '--space-bg-img': bgLayers(bgUrl, t.bgOpacity) } : {}),
   } as CSSProperties;
+}
+
+/** Imagem sobre fundo preto: uma camada preta translúcida por cima faz o papel da opacidade. */
+export function bgLayers(url: string, opacity: number) {
+  const shade = (1 - clampOpacity(opacity) / 100).toFixed(2);
+  return `linear-gradient(rgba(0, 0, 0, ${shade}), rgba(0, 0, 0, ${shade})), url("${url.replace(/["\\]/g, '')}")`;
 }
 
 export function spaceClass(t: SpaceTheme, hasBg: boolean) {

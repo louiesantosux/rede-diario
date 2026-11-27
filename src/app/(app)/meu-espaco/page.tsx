@@ -200,11 +200,17 @@ export default async function MeuEspacoPage({ searchParams }: Props) {
         ) : (
           <p style={{ marginTop: 0 }}>Suas fotos enviadas aparecem aqui.</p>
         )}
-        <div style={{ marginTop: 16 }}>
+        <div className="row" style={{ marginTop: 16 }}>
           <Link href="/criar/imagem" className="btn">
             <Icon name="image" className="btn__icon" />
             Enviar fotos
           </Link>
+          {recentIds.length > 0 && (
+            <Link href="/meu-espaco/galeria" className="btn">
+              <Icon name="trash" className="btn__icon" />
+              Gerenciar e apagar fotos
+            </Link>
+          )}
         </div>
       </Window>
     </main>

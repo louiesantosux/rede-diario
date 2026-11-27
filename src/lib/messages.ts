@@ -26,6 +26,7 @@ export const NOTICES: Record<string, string> = {
   'saiu': 'Você saiu da sua conta.',
   'post-publicado': 'Post publicado.',
   'post-privado': 'Guardado no seu diário. Só você pode ver.',
+  'post-excluido': 'Post apagado. As imagens dele continuam na sua galeria.',
   'wiki-excluida': 'Wiki excluída.',
   'imagens-salvas': 'Imagens guardadas na sua galeria.',
   'playlist-excluida': 'Playlist excluída.',

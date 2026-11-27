@@ -1,6 +1,16 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import { Icon } from '@/components/Icon';
 import { thumbUrl } from '@/lib/youtube';
 
@@ -142,6 +152,16 @@ export function useMusic() {
  */
 const SHOW_VIDEO = false;
 
+type Corner = 'br' | 'bl' | 'tl' | 'tr';
+const CORNER_KEY = 'miniplayer-corner';
+const CORNER_ORDER: Corner[] = ['br', 'bl', 'tl', 'tr'];
+const CORNER_LABEL: Record<Corner, string> = {
+  br: 'inferior direito',
+  bl: 'inferior esquerdo',
+  tl: 'superior esquerdo',
+  tr: 'superior direito',
+};
+
 const formatTime = (s: number) => {
   if (!Number.isFinite(s) || s < 0) return '0:00';
   const m = Math.floor(s / 60);
@@ -166,6 +186,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   volumeRef.current = volume;
   loopRef.current = loop;
   const holder = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLElement>(null);
+  const [corner, setCorner] = useState<Corner>('br');
+  const drag = useRef<{ x: number; y: number; id: number } | null>(null);
   const player = useRef<YTPlayer | null>(null);
   const queueRef = useRef<Track[]>([]);
   const indexRef = useRef(0);
@@ -398,6 +421,52 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     player.current?.setVolume(next);
   };
 
+  // Canto da tela onde o miniplayer fica (lembrado neste navegador).
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CORNER_KEY) as Corner | null;
+      if (saved && CORNER_ORDER.includes(saved)) setCorner(saved);
+    } catch {
+      /* ignora */
+    }
+  }, []);
+  const moveTo = (c: Corner) => {
+    setCorner(c);
+    try {
+      localStorage.setItem(CORNER_KEY, c);
+    } catch {
+      /* ignora */
+    }
+  };
+  const nextCorner = CORNER_ORDER[(CORNER_ORDER.indexOf(corner) + 1) % CORNER_ORDER.length];
+
+  // Arrastar pela barra: solta e encaixa no canto mais próximo.
+  const onDragStart = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('button, input, a')) return;
+    drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onDragMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId || !box.current) return;
+    box.current.style.transform = `translate(${e.clientX - d.x}px, ${e.clientY - d.y}px)`;
+    box.current.classList.add('miniplayer--dragging');
+  };
+  const onDragEnd = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    drag.current = null;
+    const el = box.current;
+    if (el) {
+      el.style.transform = '';
+      el.classList.remove('miniplayer--dragging');
+    }
+    if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) < 8) return; // foi só um toque
+    const top = e.clientY < window.innerHeight / 2;
+    const left = e.clientX < window.innerWidth / 2;
+    moveTo(top ? (left ? 'tl' : 'tr') : left ? 'bl' : 'br');
+  };
+
   const value = useMemo<MusicContextValue>(
     () => ({ queue, index, status, current, playQueue }),
     [queue, index, status, current, playQueue],
@@ -409,11 +478,19 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     <MusicContext.Provider value={value}>
       {children}
       <section
-        className={`miniplayer${active ? '' : ' miniplayer--hidden'}${minimized ? ' miniplayer--min' : ''}`}
+        ref={box}
+        className={`miniplayer miniplayer--${corner}${active ? '' : ' miniplayer--hidden'}${minimized ? ' miniplayer--min' : ''}`}
         aria-label="Miniplayer de música"
         aria-hidden={!active}
       >
-        <div className="miniplayer__bar">
+        <div
+          className="miniplayer__bar"
+          onPointerDown={onDragStart}
+          onPointerMove={onDragMove}
+          onPointerUp={onDragEnd}
+          onPointerCancel={onDragEnd}
+          title="Arraste para levar o player a outro canto"
+        >
           {current && trackCover(current) && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={trackCover(current)!} alt="" width={44} height={44} className="miniplayer__thumb" />
@@ -473,6 +550,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                 </button>
               </>
             )}
+            <button
+              type="button"
+              className="toolbar__btn"
+              onClick={() => moveTo(nextCorner)}
+              aria-label={`Mover player para o canto ${CORNER_LABEL[nextCorner]}`}
+              title="Mover para outro canto"
+            >
+              <span aria-hidden="true">⤢</span>
+            </button>
             <button type="button" className="toolbar__btn" onClick={close} aria-label="Fechar miniplayer">
               ✕
             </button>
