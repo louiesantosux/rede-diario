@@ -92,7 +92,9 @@ export default async function InicioPage({ searchParams }: Props) {
                     <header className="post__meta muted">
                       <span>{author}</span>
                       <span aria-hidden="true">·</span>
-                      <time dateTime={post.created_at}>{dateFmt.format(new Date(post.created_at))}</time>
+                      <Link href={`/post/${post.id}`} className="post__permalink">
+                        <time dateTime={post.created_at}>{dateFmt.format(new Date(post.created_at))}</time>
+                      </Link>
                       {mine && (
                         <>
                           <span aria-hidden="true">·</span>

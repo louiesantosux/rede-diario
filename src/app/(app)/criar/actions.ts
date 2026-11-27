@@ -38,11 +38,21 @@ export async function createPost(_prev: ComposeState, form: FormData): Promise<C
 
   const body: PostBody = { v: 1, doc, text };
   const supabase = await createClient();
+
+  // Só é possível vincular o post a uma wiki própria.
+  const wikiRaw = String(form.get('wikiId') ?? '');
+  let wikiId: string | null = null;
+  if (UUID_RE.test(wikiRaw)) {
+    const { data: auth } = await supabase.auth.getUser();
+    const { data: wiki } = await supabase.from('wikis').select('id, owner_id').eq('id', wikiRaw).maybeSingle();
+    if (wiki && wiki.owner_id === auth.user?.id) wikiId = wiki.id;
+  }
   const { error } = await supabase.from('posts').insert({
     body,
     visibility,
     reply_policy: replyPolicy,
     mission_id: missionId,
+    wiki_id: wikiId,
   });
 
   if (error) {

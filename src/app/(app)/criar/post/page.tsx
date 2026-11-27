@@ -14,19 +14,32 @@ export default async function ComporPostPage({ searchParams }: Props) {
   const sp = await searchParams;
   const missao = Array.isArray(sp.missao) ? sp.missao[0] : sp.missao;
 
+  const wikiParam = Array.isArray(sp.wiki) ? sp.wiki[0] : sp.wiki;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+
   let mission: { id: string; prompt: string } | null = null;
   if (missao && UUID_RE.test(missao)) {
-    const supabase = await createClient();
     const { data } = await supabase.from('missions').select('id, prompt').eq('id', missao).maybeSingle();
     mission = data;
   }
+  const { data: wikis } = await supabase
+    .from('wikis')
+    .select('id, title')
+    .eq('owner_id', auth.user!.id)
+    .order('updated_at', { ascending: false });
 
   return (
     <main id="conteudo" className="page">
       <Window title={mission ? 'Responder à missão' : 'Compor post'} icon="pen" headingLevel={1}>
         <div className="stack">
           <Link href="/criar">← Voltar para Criar</Link>
-          <Composer missionId={mission?.id ?? null} missionPrompt={mission?.prompt ?? null} />
+          <Composer
+            missionId={mission?.id ?? null}
+            missionPrompt={mission?.prompt ?? null}
+            wikis={wikis ?? []}
+            initialWikiId={wikiParam && UUID_RE.test(wikiParam) ? wikiParam : null}
+          />
         </div>
       </Window>
     </main>

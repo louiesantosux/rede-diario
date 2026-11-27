@@ -10,7 +10,7 @@ type Option = { href?: string; icon: IconName; title: string; text: string; soon
 // Menu no estilo "Iniciar" do Windows 7: o que pode ser criado.
 const OPTIONS: Option[] = [
   { href: '/criar/post', icon: 'pen', title: 'Post', text: 'Um texto para o seu diário ou para os amigos.' },
-  { icon: 'book', title: 'Wiki ou página', text: 'Coleções, listas e páginas sobre o que você ama.', soon: 'Etapa 2' },
+  { href: '/criar/wiki', icon: 'book', title: 'Wiki', text: 'Coleções, listas e páginas sobre o que você ama.' },
   { icon: 'image', title: 'Imagem ou moodboard', text: 'Envie fotos e ajuste cores e luz.', soon: 'Etapa 3' },
   { icon: 'music', title: 'Playlist', text: 'Músicas do YouTube reunidas por você.', soon: 'Etapa 5' },
   { icon: 'pin', title: 'Encontro no mapa', text: 'Um evento privado só com amigos.', soon: 'Etapa 6' },

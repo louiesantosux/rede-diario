@@ -26,6 +26,7 @@ export const NOTICES: Record<string, string> = {
   'saiu': 'Você saiu da sua conta.',
   'post-publicado': 'Post publicado.',
   'post-privado': 'Guardado no seu diário. Só você pode ver.',
+  'wiki-excluida': 'Wiki excluída.',
 };
 
 export function pickMessage(map: Record<string, string>, key: string | string[] | undefined) {

@@ -1,9 +1,10 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
+import { useActionState, useEffect, useRef, useState } from 'react';
+import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { Icon, type IconName } from '@/components/Icon';
+import { Icon } from '@/components/Icon';
+import { Toolbar } from '@/components/editor/Toolbar';
 import { Notice } from '@/components/Notice';
 import { createPost, type ComposeState } from '../actions';
 
@@ -25,9 +26,14 @@ const REPLY_OPTIONS: { value: ReplyPolicy; label: string }[] = [
 
 type Draft = { doc: unknown; visibility: Visibility; replyPolicy: ReplyPolicy; savedAt: number };
 
-type Props = { missionId: string | null; missionPrompt: string | null };
+type Props = {
+  missionId: string | null;
+  missionPrompt: string | null;
+  wikis: { id: string; title: string }[];
+  initialWikiId: string | null;
+};
 
-export function Composer({ missionId, missionPrompt }: Props) {
+export function Composer({ missionId, missionPrompt, wikis, initialWikiId }: Props) {
   const draftKey = `rascunho-post:${missionId ?? 'livre'}`;
   const [visibility, setVisibility] = useState<Visibility>(missionId ? 'private' : 'friends');
   const [replyPolicy, setReplyPolicy] = useState<ReplyPolicy>('friends');
@@ -182,6 +188,20 @@ export function Composer({ missionId, missionPrompt }: Props) {
         </div>
       </fieldset>
 
+      {wikis.length > 0 && (
+        <div className="field">
+          <label htmlFor="wikiId">Vincular a uma wiki (aparece no blog dela)</label>
+          <select id="wikiId" name="wikiId" defaultValue={initialWikiId ?? ''}>
+            <option value="">Nenhuma</option>
+            {wikis.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.title}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {visibility !== 'private' && (
         <fieldset className="choice-group">
           <legend>Quem pode responder</legend>
@@ -215,93 +235,5 @@ export function Composer({ missionId, missionPrompt }: Props) {
         </button>
       </div>
     </form>
-  );
-}
-
-type ToolButton = {
-  label: string;
-  icon?: IconName;
-  text?: string;
-  textStyle?: CSSProperties;
-  active?: boolean;
-  disabled?: boolean;
-  run: () => void;
-};
-
-function Toolbar({ editor }: { editor: Editor | null }) {
-  const s = useEditorState({
-    editor,
-    selector: ({ editor: e }) => ({
-      bold: e?.isActive('bold') ?? false,
-      italic: e?.isActive('italic') ?? false,
-      underline: e?.isActive('underline') ?? false,
-      strike: e?.isActive('strike') ?? false,
-      h2: e?.isActive('heading', { level: 2 }) ?? false,
-      h3: e?.isActive('heading', { level: 3 }) ?? false,
-      bullet: e?.isActive('bulletList') ?? false,
-      ordered: e?.isActive('orderedList') ?? false,
-      quote: e?.isActive('blockquote') ?? false,
-      canUndo: e?.can().undo() ?? false,
-      canRedo: e?.can().redo() ?? false,
-    }),
-  });
-
-  const chain = () => editor!.chain().focus();
-  const groups: ToolButton[][] = [
-    [
-      { label: 'Negrito', text: 'N', textStyle: { fontWeight: 800 }, active: s?.bold, run: () => chain().toggleBold().run() },
-      { label: 'Itálico', text: 'I', textStyle: { fontStyle: 'italic', fontFamily: 'Georgia, serif' }, active: s?.italic, run: () => chain().toggleItalic().run() },
-      { label: 'Sublinhado', text: 'S', textStyle: { textDecoration: 'underline' }, active: s?.underline, run: () => chain().toggleUnderline().run() },
-      { label: 'Tachado', text: 'abc', textStyle: { textDecoration: 'line-through' }, active: s?.strike, run: () => chain().toggleStrike().run() },
-    ],
-    [
-      { label: 'Título', text: 'T1', textStyle: { fontWeight: 700 }, active: s?.h2, run: () => chain().toggleHeading({ level: 2 }).run() },
-      { label: 'Subtítulo', text: 'T2', textStyle: { fontWeight: 600 }, active: s?.h3, run: () => chain().toggleHeading({ level: 3 }).run() },
-    ],
-    [
-      { label: 'Lista com marcadores', icon: 'list', active: s?.bullet, run: () => chain().toggleBulletList().run() },
-      { label: 'Lista numerada', icon: 'listOrdered', active: s?.ordered, run: () => chain().toggleOrderedList().run() },
-      { label: 'Citação', icon: 'quote', active: s?.quote, run: () => chain().toggleBlockquote().run() },
-    ],
-    [
-      { label: 'Desfazer', icon: 'undo', disabled: !s?.canUndo, run: () => chain().undo().run() },
-      { label: 'Refazer', icon: 'redo', disabled: !s?.canRedo, run: () => chain().redo().run() },
-    ],
-  ];
-
-  // Padrão ARIA de barra de ferramentas: setas movem o foco entre os botões.
-  const moveFocus = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
-    const buttons = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('button:not([disabled])'));
-    const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
-    if (i < 0) return;
-    e.preventDefault();
-    const next =
-      e.key === 'Home' ? 0 : e.key === 'End' ? buttons.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
-    buttons[next]?.focus();
-  };
-
-  return (
-    <div className="toolbar" role="toolbar" aria-label="Formatação do texto" onKeyDown={moveFocus}>
-      {groups.map((group, gi) => (
-        <div key={gi} className="toolbar__group">
-          {group.map((b) => (
-            <button
-              key={b.label}
-              type="button"
-              className="toolbar__btn"
-              aria-label={b.label}
-              title={b.label}
-              aria-pressed={b.active === undefined ? undefined : b.active}
-              disabled={!editor || b.disabled}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={b.run}
-            >
-              {b.icon ? <Icon name={b.icon} /> : <span style={b.textStyle}>{b.text}</span>}
-            </button>
-          ))}
-        </div>
-      ))}
-    </div>
   );
 }
