@@ -1,0 +1,87 @@
+/* Arquivo gerado por scripts/build-themes.mjs — não editar à mão. */
+
+:root,
+[data-theme='aero-claro'] {
+  color-scheme: light;
+  --bg: #d6e8f7;
+  --bg2: #eef6fc;
+  --surface: #fbfdff;
+  --surface-alt: #eef4fa;
+  --text: #17222d;
+  --text-muted: #3b4b5a;
+  --border: #6d8296;
+  --accent: #0a4c8c;
+  --on-accent: #ffffff;
+  --titlebar-from: #cfe4f6;
+  --titlebar-to: #a9cbe9;
+  --titlebar-text: #0f1a24;
+  --focus: #b3261e;
+  --danger: #8c1d18;
+  --success: #1e5e2f;
+  --glass: rgba(255, 255, 255, 0.55);
+  --bubble: rgba(255, 255, 255, 0.35);
+}
+
+[data-theme='aero-escuro'] {
+  color-scheme: dark;
+  --bg: #0b1724;
+  --bg2: #142a40;
+  --surface: #13212f;
+  --surface-alt: #1a2c3e;
+  --text: #e9eff5;
+  --text-muted: #b7c6d4;
+  --border: #7d93a8;
+  --accent: #9cc9ff;
+  --on-accent: #0b1724;
+  --titlebar-from: #25415e;
+  --titlebar-to: #1a3047;
+  --titlebar-text: #f2f6fa;
+  --focus: #ffc857;
+  --danger: #ffb4ab;
+  --success: #a6e3b5;
+  --glass: rgba(19, 33, 47, 0.6);
+  --bubble: rgba(156, 201, 255, 0.07);
+}
+
+[data-theme='papel'] {
+  color-scheme: light;
+  --bg: #e9dfcb;
+  --bg2: #f2eadb;
+  --surface: #f8f2e6;
+  --surface-alt: #efe6d3;
+  --text: #2a2318;
+  --text-muted: #4d4333;
+  --border: #7f705a;
+  --accent: #6b3200;
+  --on-accent: #fffaf0;
+  --titlebar-from: #e6d8bc;
+  --titlebar-to: #d6c4a0;
+  --titlebar-text: #221c12;
+  --focus: #0b4f8a;
+  --danger: #8a1c14;
+  --success: #2f5a1e;
+  --glass: rgba(248, 242, 230, 0.7);
+  --bubble: rgba(255, 252, 244, 0.35);
+}
+
+[data-theme='alto-contraste'] {
+  color-scheme: dark;
+  --bg: #000000;
+  --bg2: #000000;
+  --surface: #000000;
+  --surface-alt: #111111;
+  --text: #ffffff;
+  --text-muted: #ffffff;
+  --border: #ffffff;
+  --accent: #ffe14d;
+  --on-accent: #000000;
+  --titlebar-from: #000000;
+  --titlebar-to: #000000;
+  --titlebar-text: #ffffff;
+  --focus: #00e5ff;
+  --danger: #ff9e9e;
+  --success: #7dff9e;
+  --glass: #000000;
+  --bubble: transparent;
+}
+

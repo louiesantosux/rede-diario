@@ -1,0 +1,365 @@
+/* =====================================================================
+   Base visual: Windows 7 Aero + MySpace + Y2K, com estímulo baixo.
+   Cores vêm de themes.css (gerado e validado por scripts/build-themes.mjs).
+   ===================================================================== */
+
+:root {
+  --font-scale: 1;
+  --line-height: 1.6;
+  --font-ui: 'Segoe UI', 'Trebuchet MS', Tahoma, system-ui, -apple-system, sans-serif;
+  --font-display: 'Trebuchet MS', 'Segoe UI', Tahoma, system-ui, sans-serif;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --taskbar-h: 64px;
+  --shadow: 0 8px 24px rgba(10, 30, 50, 0.18);
+}
+
+[data-line-spacing='amplo'] {
+  --line-height: 1.9;
+  letter-spacing: 0.02em;
+  word-spacing: 0.08em;
+}
+[data-font='atkinson'] {
+  --font-ui: var(--font-atkinson), 'Segoe UI', system-ui, sans-serif;
+  --font-display: var(--font-atkinson), 'Segoe UI', system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: calc(100% * var(--font-scale));
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-ui);
+  line-height: var(--line-height);
+  color: var(--text);
+  background:
+    radial-gradient(circle at 12% 18%, var(--bubble) 0 60px, transparent 61px),
+    radial-gradient(circle at 88% 12%, var(--bubble) 0 40px, transparent 41px),
+    radial-gradient(circle at 78% 82%, var(--bubble) 0 90px, transparent 91px),
+    linear-gradient(160deg, var(--bg) 0%, var(--bg2) 100%);
+  background-attachment: fixed;
+}
+[data-theme='alto-contraste'] body,
+[data-reduce-transparency='true'] body {
+  background: var(--bg);
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 0.18em;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  line-height: 1.25;
+  margin: 0 0 var(--space-2);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--space-3);
+  top: -100px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--focus);
+  border-radius: var(--radius-sm);
+  z-index: 100;
+}
+.skip-link:focus {
+  top: var(--space-3);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Janela Aero ---------- */
+.window {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px) saturate(1.2);
+}
+[data-reduce-transparency='true'] .window,
+[data-theme='alto-contraste'] .window {
+  background: var(--surface);
+  backdrop-filter: none;
+  box-shadow: none;
+}
+.window__titlebar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: linear-gradient(180deg, var(--titlebar-from), var(--titlebar-to));
+  color: var(--titlebar-text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.window__titlebar h1,
+.window__titlebar h2 {
+  font-size: inherit;
+  margin: 0;
+}
+.window__icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.window__body {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  padding: var(--space-4);
+}
+
+/* ---------- Layout ---------- */
+.page {
+  width: min(100% - 32px, 760px);
+  margin: var(--space-5) auto calc(var(--taskbar-h) + var(--space-5));
+  display: grid;
+  gap: var(--space-4);
+}
+.page--narrow {
+  width: min(100% - 32px, 440px);
+}
+.stack {
+  display: grid;
+  gap: var(--space-3);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.muted {
+  color: var(--text-muted);
+}
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- Formulários ---------- */
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+.field label {
+  font-weight: 600;
+}
+.field small {
+  color: var(--text-muted);
+}
+input[type='text'],
+input[type='email'],
+input[type='password'],
+select,
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  min-height: 44px;
+  width: 100%;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin: 0;
+}
+legend {
+  font-weight: 700;
+  padding: 0 var(--space-1);
+}
+.check {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  min-height: 44px;
+  padding-top: 10px;
+}
+.check input {
+  width: 20px;
+  height: 20px;
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+
+/* ---------- Botões com brilho Aero ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 18px;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-alt) 100%);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.btn--ghost {
+  background: transparent;
+  box-shadow: none;
+}
+.btn:hover {
+  filter: brightness(1.05);
+}
+.btn--block {
+  width: 100%;
+}
+
+/* ---------- Avisos ---------- */
+.notice {
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+}
+.notice--error {
+  color: var(--danger);
+}
+.notice--ok {
+  color: var(--success);
+}
+
+/* ---------- Cartões ---------- */
+.card {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+/* ---------- Barra de tarefas ---------- */
+.taskbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  height: var(--taskbar-h);
+  display: flex;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--titlebar-from), var(--titlebar-to));
+  border-top: 1px solid var(--border);
+  z-index: 50;
+}
+.taskbar ul {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: var(--space-1);
+  width: min(100%, 760px);
+  justify-content: space-between;
+}
+.taskbar li {
+  flex: 1;
+  display: flex;
+}
+.taskbar a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: var(--radius-sm);
+  color: var(--titlebar-text);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.taskbar a[aria-current='page'] {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+.taskbar .taskbar__create {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  align-self: center;
+  margin-inline: auto;
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.taskbar svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ---------- Movimento reduzido ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reduce-motion='false'] .btn,
+  [data-reduce-motion='false'] .taskbar a {
+    transition: filter 120ms ease, background-color 120ms ease;
+  }
+}
+[data-reduce-motion='true'] *,
+[data-reduce-motion='true'] *::before,
+[data-reduce-motion='true'] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
