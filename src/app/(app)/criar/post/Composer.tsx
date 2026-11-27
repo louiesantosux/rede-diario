@@ -2,9 +2,12 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import { Icon } from '@/components/Icon';
 import { Toolbar } from '@/components/editor/Toolbar';
+import { editorExtensions } from '@/components/editor/extensions';
+import { InsertImageDialog, type InsertedImage } from '@/components/editor/InsertImageDialog';
+import { createClient } from '@/lib/supabase/client';
+import { hydrateDoc } from '@/lib/mediaClient';
 import { Notice } from '@/components/Notice';
 import { createPost, type ComposeState } from '../actions';
 
@@ -38,6 +41,7 @@ export function Composer({ missionId, missionPrompt, wikis, initialWikiId }: Pro
   const [visibility, setVisibility] = useState<Visibility>(missionId ? 'private' : 'friends');
   const [replyPolicy, setReplyPolicy] = useState<ReplyPolicy>('friends');
   const [draftStatus, setDraftStatus] = useState<'none' | 'restored' | 'saved'>('none');
+  const [imageOpen, setImageOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ComposeState, FormData>(createPost, undefined);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prefs = useRef({ visibility, replyPolicy });
@@ -59,12 +63,7 @@ export function Composer({ missionId, missionPrompt, wikis, initialWikiId }: Pro
 
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [2, 3] },
-        link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
-      }),
-    ],
+    extensions: editorExtensions(),
     editorProps: {
       attributes: {
         class: 'composer__editor rich',
@@ -83,6 +82,10 @@ export function Composer({ missionId, missionPrompt, wikis, initialWikiId }: Pro
         setVisibility(draft.visibility);
         setReplyPolicy(draft.replyPolicy);
         setDraftStatus('restored');
+        // URLs de imagens no rascunho expiram: gera novas.
+        void hydrateDoc(createClient(), draft.doc).then(({ doc, hasImages }) => {
+          if (hasImages) editor.commands.setContent(doc as Parameters<typeof editor.commands.setContent>[0]);
+        });
       } catch {
         /* rascunho inválido: ignora */
       }
@@ -121,6 +124,14 @@ export function Composer({ missionId, missionPrompt, wikis, initialWikiId }: Pro
     formAction(form);
   };
 
+  const insertImage = (img: InsertedImage) => {
+    editor
+      ?.chain()
+      .focus()
+      .insertContent({ type: 'image', attrs: { src: img.url, alt: img.alt, mediaId: img.mediaId } })
+      .run();
+  };
+
   const discard = () => {
     try {
       localStorage.removeItem(draftKey);
@@ -154,11 +165,11 @@ export function Composer({ missionId, missionPrompt, wikis, initialWikiId }: Pro
         <p id="composer-label" className="composer__label">
           Texto
         </p>
-        <Toolbar editor={editor} />
+        <Toolbar editor={editor} onImage={() => setImageOpen(true)} />
         <EditorContent editor={editor} />
         <div className="composer__status">
           <span id="composer-help" className="muted">
-            Links colados viram links automaticamente.
+            Links colados viram links automaticamente. Use o botão de imagem para inserir fotos no texto.
           </span>
           <span className="muted" role="status" aria-live="polite">
             {draftStatus === 'restored' && 'Rascunho recuperado.'}
@@ -166,6 +177,8 @@ export function Composer({ missionId, missionPrompt, wikis, initialWikiId }: Pro
           </span>
         </div>
       </div>
+
+      <InsertImageDialog open={imageOpen} onClose={() => setImageOpen(false)} onInsert={insertImage} />
 
       <fieldset className="choice-group">
         <legend>Quem pode ver</legend>

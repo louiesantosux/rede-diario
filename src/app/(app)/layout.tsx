@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { Taskbar } from '@/components/Taskbar';
 import { PrefsSync } from '@/components/PrefsSync';
+import { MusicProvider } from '@/components/music/MusicProvider';
 import { createClient } from '@/lib/supabase/server';
 import type { A11yPrefs } from '@/lib/prefs';
 
@@ -13,10 +14,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { data: profile } = await supabase.from('profiles').select('a11y_prefs').eq('id', data.user.id).single();
 
   return (
-    <>
+    <MusicProvider>
       <PrefsSync saved={(profile?.a11y_prefs ?? null) as Partial<A11yPrefs> | null} />
       {children}
       <Taskbar />
-    </>
+    </MusicProvider>
   );
 }

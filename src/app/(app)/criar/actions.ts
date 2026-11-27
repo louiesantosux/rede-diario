@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { MAX_TEXT, docText, sanitizeDoc, type PostBody } from '@/lib/richtext';
+import { MAX_INLINE_IMAGES, MAX_TEXT, docMediaIds, docText, sanitizeDoc, type PostBody } from '@/lib/richtext';
 
 export type ComposeState = { error: string } | undefined;
 
@@ -26,7 +26,9 @@ export async function createPost(_prev: ComposeState, form: FormData): Promise<C
   if (!doc) return { error: 'Não foi possível ler o texto. Tente novamente.' };
 
   const text = docText(doc);
-  if (!text) return { error: 'Escreva algo antes de publicar.' };
+  const mediaIds = docMediaIds(doc);
+  if (!text && mediaIds.length === 0) return { error: 'Escreva algo antes de publicar.' };
+  if (mediaIds.length > MAX_INLINE_IMAGES) return { error: `Use no máximo ${MAX_INLINE_IMAGES} imagens por post.` };
   if (text.length > MAX_TEXT) {
     return { error: `O texto passou do limite de ${MAX_TEXT.toLocaleString('pt-BR')} caracteres. Divida em mais de um post.` };
   }
@@ -53,6 +55,8 @@ export async function createPost(_prev: ComposeState, form: FormData): Promise<C
     reply_policy: replyPolicy,
     mission_id: missionId,
     wiki_id: wikiId,
+    // Imagens do texto entram em media_ids: é isso que libera a visualização para os leitores.
+    media_ids: mediaIds,
   });
 
   if (error) {

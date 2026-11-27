@@ -14,7 +14,15 @@ type ToolButton = {
   run: () => void;
 };
 
-export function Toolbar({ editor, label = 'Formatação do texto' }: { editor: Editor | null; label?: string }) {
+export function Toolbar({
+  editor,
+  label = 'Formatação do texto',
+  onImage,
+}: {
+  editor: Editor | null;
+  label?: string;
+  onImage?: () => void;
+}) {
   const s = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -48,6 +56,7 @@ export function Toolbar({ editor, label = 'Formatação do texto' }: { editor: E
       { label: 'Lista com marcadores', icon: 'list', active: s?.bullet, run: () => chain().toggleBulletList().run() },
       { label: 'Lista numerada', icon: 'listOrdered', active: s?.ordered, run: () => chain().toggleOrderedList().run() },
       { label: 'Citação', icon: 'quote', active: s?.quote, run: () => chain().toggleBlockquote().run() },
+      ...(onImage ? [{ label: 'Inserir imagem', icon: 'image' as IconName, run: onImage }] : []),
     ],
     [
       { label: 'Desfazer', icon: 'undo', disabled: !s?.canUndo, run: () => chain().undo().run() },

@@ -1,4 +1,4 @@
-import { sanitizeDoc, type RTDoc } from './richtext';
+import { docMediaIds, sanitizeDoc, type RTDoc } from './richtext';
 
 // Blocos de uma página de wiki. Salvos como JSON e validados no servidor.
 
@@ -51,7 +51,9 @@ export function blockPlaylistIds(blocks: Block[]): string[] {
 
 /** Todas as imagens usadas numa página (para a tabela page_media). */
 export function blockMediaIds(blocks: Block[]): string[] {
-  return Array.from(new Set(blocks.flatMap((b) => (b.type === 'images' ? b.mediaIds : []))));
+  return Array.from(
+    new Set(blocks.flatMap((b) => (b.type === 'images' ? b.mediaIds : b.type === 'text' ? docMediaIds(b.doc) : []))),
+  );
 }
 
 export function sanitizeBlocks(raw: unknown): Block[] {

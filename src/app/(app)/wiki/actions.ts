@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { blockMediaIds, sanitizeBlocks, templatePages, TEMPLATES, type TemplateId } from '@/lib/blocks';
-import { THEME_PRESETS, sanitizeTheme, themePasses } from '@/lib/wikiTheme';
+import { THEME_PRESETS, sanitizeTheme } from '@/lib/wikiTheme';
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -117,10 +117,9 @@ export async function saveWikiSettings(_prev: FormState, form: FormData): Promis
   } catch {
     /* usa o padrão */
   }
+  // O contraste é recomendado, não obrigatório: a escolha final é de quem personaliza.
+  // Visitantes podem usar o "Modo leitura" para ver a página no tema acessível.
   const theme = sanitizeTheme(rawTheme);
-  if (!themePasses(theme)) {
-    return { error: 'O contraste entre texto e fundo está abaixo do mínimo (4,5:1). Ajuste as cores para salvar.' };
-  }
 
   const supabase = await createClient();
   const { error } = await supabase

@@ -129,7 +129,7 @@ export function WikiSettings({ wiki, confirmError }: Props) {
               </div>
 
               <div className="contrast-report" role="status" aria-live="polite">
-                <p className="contrast-report__title">Verificação de contraste</p>
+                <p className="contrast-report__title">Verificação de contraste (recomendação)</p>
                 <ul>
                   {checks.map((c) => {
                     const level = contrastLevel(c.ratio);
@@ -137,13 +137,18 @@ export function WikiSettings({ wiki, confirmError }: Props) {
                       <li key={c.label} className={level === 'insuficiente' ? 'is-bad' : 'is-ok'}>
                         <span>{c.label}</span>
                         <strong>
-                          {c.ratio.toFixed(1).replace('.', ',')}:1 · {level === 'insuficiente' ? 'abaixo do mínimo' : level}
+                          {c.ratio.toFixed(1).replace('.', ',')}:1 · {level === 'insuficiente' ? 'abaixo do recomendado' : level}
                         </strong>
                       </li>
                     );
                   })}
                 </ul>
-                {!passes && <p style={{ margin: 0 }}>Para salvar, o contraste precisa ser de pelo menos 4,5:1.</p>}
+                {!passes && (
+                  <p style={{ margin: 0 }}>
+                    Recomendação: pelo menos 4,5:1 para que mais pessoas consigam ler. Você pode salvar mesmo assim; quem
+                    precisar pode ativar o Modo leitura.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -170,7 +175,7 @@ export function WikiSettings({ wiki, confirmError }: Props) {
           </div>
 
           <div className="row" style={{ justifyContent: 'flex-end' }}>
-            <button type="submit" className="btn btn--primary" disabled={pending || !passes}>
+            <button type="submit" className="btn btn--primary" disabled={pending}>
               {pending ? 'Salvando…' : 'Salvar aparência'}
             </button>
           </div>

@@ -37,7 +37,7 @@ export default async function PlaylistPage({ params }: Props) {
           {playlist.description && <p style={{ margin: 0 }}>{playlist.description}</p>}
           <PlaylistPlayer tracks={tracks} title={playlist.title} />
           <p className="muted" style={{ margin: 0, fontSize: '0.8125rem' }}>
-            Nada toca sozinho: escolha uma faixa e aperte play. As seguintes tocam em sequência.
+            Nada toca sozinho. Ao escolher uma faixa, as seguintes tocam em sequência no miniplayer.
           </p>
         </div>
       </Window>

@@ -41,7 +41,7 @@ export function WikiBlocks({
       {blocks.map((block) => {
         switch (block.type) {
           case 'text':
-            return <RichText key={block.id} doc={block.doc} />;
+            return <RichText key={block.id} doc={block.doc} media={media} />;
 
           case 'divider':
             return (

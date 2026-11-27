@@ -15,7 +15,8 @@ export type RTNode =
   | { type: 'blockquote'; content?: RTNode[] }
   | { type: 'codeBlock'; content?: RTNode[] }
   | { type: 'hardBreak' }
-  | { type: 'horizontalRule' };
+  | { type: 'horizontalRule' }
+  | { type: 'image'; attrs: { mediaId: string; alt: string } };
 
 export type RTDoc = { type: 'doc'; content: RTNode[] };
 
@@ -25,6 +26,8 @@ export const MAX_TEXT = 20000;
 const MAX_DEPTH = 12;
 const MAX_NODES = 5000;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const MAX_INLINE_IMAGES = 20;
 const CONTAINERS = new Set(['paragraph', 'bulletList', 'listItem', 'blockquote', 'codeBlock']);
 const SIMPLE_MARKS = new Set(['bold', 'italic', 'underline', 'strike', 'code']);
 
@@ -81,6 +84,13 @@ function cleanNode(raw: unknown, depth: number, budget: { n: number }): RTNode |
     case 'hardBreak':
     case 'horizontalRule':
       return { type: raw.type };
+    case 'image': {
+      // Guarda só a referência à mídia; a URL (temporária) é gerada na exibição.
+      const a = isObj(raw.attrs) ? raw.attrs : {};
+      if (typeof a.mediaId !== 'string' || !UUID_RE.test(a.mediaId)) return null;
+      const alt = typeof a.alt === 'string' ? a.alt.slice(0, 500) : '';
+      return { type: 'image', attrs: { mediaId: a.mediaId, alt } };
+    }
     default:
       if (CONTAINERS.has(raw.type)) return { type: raw.type as 'paragraph', content: children() };
       return null;
@@ -93,6 +103,19 @@ export function sanitizeDoc(raw: unknown): RTDoc | null {
   const budget = { n: MAX_NODES };
   const content = raw.content.map((c) => cleanNode(c, 1, budget)).filter((c): c is RTNode => c !== null);
   return { type: 'doc', content };
+}
+
+/** IDs das imagens usadas no texto, na ordem em que aparecem. */
+export function docMediaIds(doc: RTDoc): string[] {
+  const ids: string[] = [];
+  const walk = (nodes: RTNode[] | undefined) => {
+    for (const n of nodes ?? []) {
+      if (n.type === 'image') ids.push(n.attrs.mediaId);
+      else if ('content' in n) walk(n.content);
+    }
+  };
+  walk(doc.content);
+  return Array.from(new Set(ids));
 }
 
 /** Texto puro do documento (para prévias, busca e validação de tamanho). */

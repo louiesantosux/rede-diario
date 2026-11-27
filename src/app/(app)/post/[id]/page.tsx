@@ -6,7 +6,7 @@ import { RichText } from '@/components/RichText';
 import { MediaGallery } from '@/components/MediaGallery';
 import { getMediaViews, orderedViews } from '@/lib/media';
 import { createClient } from '@/lib/supabase/server';
-import { isPostBody, sanitizeDoc } from '@/lib/richtext';
+import { docMediaIds, isPostBody, sanitizeDoc } from '@/lib/richtext';
 import { ReplyForm } from './ReplyForm';
 
 export const metadata: Metadata = { title: 'Post' };
@@ -43,8 +43,9 @@ export default async function PostPage({ params }: Props) {
   };
   const mine = p.author_id === userId;
   const mediaIds = p.media_ids ?? [];
-  const gallery = orderedViews(mediaIds, await getMediaViews(supabase, mediaIds));
+  const mediaViews = await getMediaViews(supabase, mediaIds);
   const doc = isPostBody(p.body) ? sanitizeDoc(p.body.doc) : null;
+  const inline = doc ? docMediaIds(doc) : [];
 
   let replies: { id: string; body: string; created_at: string; sender: { username: string; display_name: string } | null }[] = [];
   if (mine) {
@@ -83,8 +84,8 @@ export default async function PostPage({ params }: Props) {
             )}
           </p>
           {p.mission && <p className="post__mission">Missão: {p.mission.prompt}</p>}
-          {doc ? <RichText doc={doc} /> : <p>{isPostBody(p.body) ? p.body.text : ''}</p>}
-          <MediaGallery items={gallery} />
+          {doc ? <RichText doc={doc} media={mediaViews} /> : <p>{isPostBody(p.body) ? p.body.text : ''}</p>}
+          <MediaGallery items={orderedViews(mediaIds.filter((m) => !inline.includes(m)), mediaViews)} />
         </article>
       </Window>
 

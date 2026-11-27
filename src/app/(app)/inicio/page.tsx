@@ -7,7 +7,8 @@ import { MediaGallery } from '@/components/MediaGallery';
 import { getMediaViews, orderedViews } from '@/lib/media';
 import { createClient } from '@/lib/supabase/server';
 import { NOTICES, pickMessage } from '@/lib/messages';
-import { isPostBody, sanitizeDoc } from '@/lib/richtext';
+import { docMediaIds, isPostBody, sanitizeDoc } from '@/lib/richtext';
+import type { MediaView } from '@/lib/media';
 import { MissionCard } from './MissionCard';
 
 export const metadata: Metadata = { title: 'Início' };
@@ -34,10 +35,16 @@ const VIS_LABEL: Record<FeedPost['visibility'], string> = {
 };
 const dateFmt = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Sao_Paulo' });
 
-function PostBodyView({ body }: { body: unknown }) {
+function inlineIds(body: unknown): string[] {
+  if (!isPostBody(body)) return [];
+  const doc = sanitizeDoc(body.doc);
+  return doc ? docMediaIds(doc) : [];
+}
+
+function PostBodyView({ body, media }: { body: unknown; media: Record<string, MediaView> }) {
   if (isPostBody(body)) {
     const doc = sanitizeDoc(body.doc); // defesa extra na leitura
-    if (doc) return <RichText doc={doc} />;
+    if (doc) return <RichText doc={doc} media={media} />;
   }
   const text = typeof body === 'object' && body && 'text' in body ? String((body as { text: unknown }).text) : '';
   return <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{text}</p>;
@@ -110,8 +117,13 @@ export default async function InicioPage({ searchParams }: Props) {
                       )}
                     </header>
                     {post.mission && <p className="post__mission">Missão: {post.mission.prompt}</p>}
-                    <PostBodyView body={post.body} />
-                    <MediaGallery items={orderedViews(post.media_ids ?? [], media)} />
+                    <PostBodyView body={post.body} media={media} />
+                    <MediaGallery
+                      items={orderedViews(
+                        (post.media_ids ?? []).filter((id) => !inlineIds(post.body).includes(id)),
+                        media,
+                      )}
+                    />
                   </article>
                 </li>
               );
