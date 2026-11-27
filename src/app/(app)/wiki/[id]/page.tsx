@@ -4,11 +4,11 @@ import { notFound } from 'next/navigation';
 import { Window } from '@/components/Window';
 import { Icon } from '@/components/Icon';
 import { WikiBlocks, type BlockPlaylist, type BlogPost } from '@/components/wiki/WikiBlocks';
+import { WikiTabs } from '@/components/wiki/WikiTabs';
 import { createClient } from '@/lib/supabase/server';
 import { blockMediaIds, blockPlaylistIds, sanitizeBlocks } from '@/lib/blocks';
 import { getMediaViews } from '@/lib/media';
 import { sanitizeTheme, themeStyle } from '@/lib/wikiTheme';
-import { createPage } from '../actions';
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -125,29 +125,12 @@ export default async function WikiPage({ params, searchParams }: Props) {
             )}
           </header>
 
-          {(list.length > 1 || isOwner) && (
-            <nav className="wiki-tabs" aria-label="Páginas da wiki">
-              <ul>
-                {list.map((p) => (
-                  <li key={p.id}>
-                    <Link href={`/wiki/${id}?p=${p.id}`} aria-current={p.id === current?.id ? 'page' : undefined}>
-                      {p.title}
-                    </Link>
-                  </li>
-                ))}
-                {isOwner && (
-                  <li>
-                    <form action={createPage}>
-                      <input type="hidden" name="wikiId" value={id} />
-                      <button type="submit" className="wiki-tabs__add">
-                        + Nova página
-                      </button>
-                    </form>
-                  </li>
-                )}
-              </ul>
-            </nav>
-          )}
+          <WikiTabs
+            wikiId={id}
+            pages={list.map((p) => ({ id: p.id as string, title: p.title as string }))}
+            currentId={current?.id ?? null}
+            isOwner={isOwner}
+          />
 
           {current ? (
             <article className="wiki-page">

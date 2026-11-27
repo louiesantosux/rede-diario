@@ -1913,3 +1913,29 @@ a.start-menu__item:focus-visible {
     width: auto;
   }
 }
+
+/* Abas da wiki reordenáveis */
+.wiki-tabs li {
+  touch-action: none;
+}
+.wiki-tabs li.is-dragging {
+  position: relative;
+  z-index: 2;
+  opacity: 0.85;
+}
+.wiki-tabs li.is-dragging a {
+  border-color: var(--w-accent);
+  background: var(--w-surface);
+  box-shadow: 0 6px 16px var(--shadow);
+  cursor: grabbing;
+}
+.wiki-tabs__grip {
+  margin-right: 6px;
+  font-size: 0.85em;
+  opacity: 0.6;
+  cursor: grab;
+}
+.wiki-tabs__help {
+  margin: -16px 0 var(--space-3);
+  font-size: 0.8125rem;
+}

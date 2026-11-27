@@ -189,3 +189,25 @@ export async function deleteWiki(form: FormData) {
   await supabase.from('wikis').delete().eq('id', wikiId);
   redirect('/meu-espaco?aviso=wiki-excluida');
 }
+
+/** Reordena as páginas da wiki (arrastar e soltar). Recebe os ids na nova ordem. */
+export async function reorderPages(wikiId: string, orderedIds: string[]): Promise<{ ok: boolean }> {
+  if (!UUID_RE.test(wikiId) || !Array.isArray(orderedIds) || orderedIds.length > 200) return { ok: false };
+  const ids = orderedIds.filter((v) => typeof v === 'string' && UUID_RE.test(v));
+  const supabase = await createClient();
+
+  const { data: current } = await supabase.from('pages').select('id').eq('wiki_id', wikiId);
+  const known = new Set((current ?? []).map((p) => p.id as string));
+  if (ids.length !== known.size || ids.some((id) => !known.has(id))) return { ok: false };
+
+  // A RLS só permite atualizar páginas da própria wiki.
+  const results = await Promise.all(
+    ids.map((id, position) => supabase.from('pages').update({ position }).eq('id', id).eq('wiki_id', wikiId)),
+  );
+  if (results.some((r) => r.error)) {
+    console.error('[reorderPages]', results.find((r) => r.error)?.error?.message);
+    return { ok: false };
+  }
+  revalidatePath(`/wiki/${wikiId}`);
+  return { ok: true };
+}
