@@ -24,6 +24,7 @@ export async function signIn(form: FormData) {
   });
 
   if (error) {
+    console.error('[signIn]', error.status, error.code, error.message);
     const code =
       error.code === 'email_not_confirmed'
         ? 'email-nao-confirmado'
@@ -54,7 +55,23 @@ export async function signUp(form: FormData) {
     },
   });
 
-  if (error) redirect(`/cadastro?erro=${error.status === 429 ? 'muitas' : 'cadastro-falhou'}`);
+  if (error) {
+    // Aparece em Vercel → Logs; nunca registra e-mail nem senha.
+    console.error('[signUp]', error.status, error.code, error.message);
+    const map: Record<string, string> = {
+      user_already_exists: 'email-em-uso',
+      email_exists: 'email-em-uso',
+      email_address_not_authorized: 'email-nao-autorizado',
+      over_email_send_rate_limit: 'limite-email',
+      over_request_rate_limit: 'muitas',
+      weak_password: 'senha-fraca',
+      email_address_invalid: 'email-invalido',
+      validation_failed: 'email-invalido',
+      signup_disabled: 'cadastro-desativado',
+      unexpected_failure: 'erro-banco',
+    };
+    redirect(`/cadastro?erro=${map[error.code ?? ''] ?? (error.status === 429 ? 'muitas' : 'cadastro-falhou')}`);
+  }
   redirect('/entrar?aviso=confirme-email');
 }
 

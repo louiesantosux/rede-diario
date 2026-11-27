@@ -10,6 +10,13 @@ export const ERRORS: Record<string, string> = {
   'google-falhou': 'Não foi possível entrar com o Google. Tente novamente.',
   'senha-falhou': 'Não foi possível alterar a senha. Tente novamente.',
   muitas: 'Muitas tentativas seguidas. Aguarde alguns minutos.',
+  'email-em-uso': 'Já existe uma conta com este e-mail. Tente entrar ou recuperar a senha.',
+  'email-nao-autorizado': 'O envio de e-mails ainda não está liberado para este endereço. Configure um SMTP próprio no Supabase.',
+  'limite-email': 'Limite de envio de e-mails atingido. Tente novamente em uma hora.',
+  'senha-fraca': 'Senha muito fraca ou já exposta em vazamentos. Escolha outra.',
+  'email-invalido': 'E-mail inválido.',
+  'cadastro-desativado': 'Novos cadastros estão desativados no momento.',
+  'erro-banco': 'Erro ao criar o perfil. Tente outro @usuário.',
 };
 
 export const NOTICES: Record<string, string> = {

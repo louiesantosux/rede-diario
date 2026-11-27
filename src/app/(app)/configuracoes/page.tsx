@@ -17,6 +17,7 @@ export default function ConfiguracoesPage() {
     <main id="conteudo" className="page">
       <Window title="Ajustes" icon="gear" headingLevel={1}>
         <div className="stack">
+          <Link href="/meu-espaco">← Voltar para Meu espaço</Link>
           <ul className="stack" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {SECTIONS.map((s) => (
               <li key={s.href} className="card">

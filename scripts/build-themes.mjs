@@ -13,6 +13,20 @@ const luminance = (hex) => {
   const [r, g, b] = hexToRgb(hex).map(channel);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
+// Sobrepõe uma camada rgba(...) a uma cor sólida e devolve o hex resultante.
+const blend = (baseHex, rgba) => {
+  const m = rgba.match(/rgba?\(([^)]+)\)/);
+  if (!m) return rgba;
+  const [r, g, b, a = 1] = m[1].split(',').map((v) => Number(v.trim()));
+  const base = hexToRgb(baseHex).map((c) => c * 255);
+  const mix = [r, g, b].map((c, i) => Math.round(base[i] * (1 - a) + c * a));
+  return `#${mix.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+};
+const resolve = (t, key) => {
+  const [base, layer] = key.split('+');
+  return layer ? blend(t[base], t[layer]) : t[base];
+};
+
 export const contrast = (a, b) => {
   const [l1, l2] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (l1 + 0.05) / (l2 + 0.05);
@@ -22,7 +36,7 @@ let failures = 0;
 for (const [id, t] of Object.entries(themes)) {
   console.log(`\n${t.label}`);
   for (const [fg, bg, min, desc] of checks) {
-    const ratio = contrast(t[fg], t[bg]);
+    const ratio = contrast(resolve(t, fg), resolve(t, bg));
     const ok = ratio >= min;
     if (!ok) failures += 1;
     console.log(`  ${ok ? 'ok   ' : 'FALHA'} ${ratio.toFixed(2).padStart(5)}:1 (mín. ${min}) ${desc}`);
