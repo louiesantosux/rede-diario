@@ -578,3 +578,283 @@ legend {
   transition: none !important;
   scroll-behavior: auto !important;
 }
+
+/* =====================================================================
+   Menu Criar (estilo menu Iniciar)
+   ===================================================================== */
+.start-menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+.start-menu__item {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: 10px 12px;
+  min-height: 56px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  color: var(--text);
+  text-decoration: none;
+}
+a.start-menu__item:hover,
+a.start-menu__item:focus-visible {
+  border-color: var(--accent);
+  background:
+    linear-gradient(180deg, var(--glass-edge) 0 46%, transparent 54%),
+    var(--surface-alt);
+  box-shadow: 0 0 0 3px var(--glow);
+}
+.start-menu__item--soon {
+  cursor: default;
+}
+.start-menu__item--soon .start-menu__icon {
+  opacity: 0.55;
+}
+.start-menu__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, var(--glass-edge) 0 46%, transparent 54%),
+    linear-gradient(180deg, var(--surface), var(--surface-alt));
+  color: var(--accent);
+}
+.start-menu__icon svg {
+  width: 22px;
+  height: 22px;
+}
+.start-menu__text {
+  display: grid;
+}
+.start-menu__title {
+  font-weight: 700;
+}
+.start-menu__hint {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+/* =====================================================================
+   Compor post
+   ===================================================================== */
+.composer {
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  overflow: hidden;
+}
+.composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--glow);
+}
+.composer__label {
+  margin: 0;
+  padding: 8px 12px 0;
+  font-weight: 600;
+}
+.composer__editor {
+  min-height: 220px;
+  padding: 12px 16px;
+  outline: none;
+}
+.composer__editor:focus-visible {
+  outline: none; /* o foco aparece no contorno do .composer */
+}
+.composer__status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 6px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-alt);
+  font-size: 0.8125rem;
+}
+.composer__mission {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.composer__mission svg {
+  color: var(--accent);
+  margin-top: 4px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 6px 8px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, var(--titlebar-shine) 0 48%, transparent 52%),
+    linear-gradient(180deg, var(--titlebar-from), var(--titlebar-to));
+}
+.toolbar__group {
+  display: flex;
+  gap: 2px;
+  padding-right: var(--space-2);
+  border-right: 1px solid var(--border);
+}
+.toolbar__group:last-child {
+  border-right: 0;
+}
+.toolbar__btn {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--titlebar-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.toolbar__btn svg {
+  width: 18px;
+  height: 18px;
+}
+.toolbar__btn:hover:not(:disabled) {
+  border-color: var(--glass-edge);
+  background: linear-gradient(180deg, var(--glass-edge), transparent);
+}
+.toolbar__btn[aria-pressed='true'] {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: inset 0 1px 3px var(--shadow);
+}
+.toolbar__btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Opções de visibilidade */
+.choice-group {
+  background: var(--surface-alt);
+}
+.choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+.choice {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+}
+.choice input {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+.choice:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 0 4px var(--glow);
+}
+.choice__text {
+  display: grid;
+}
+.choice__label {
+  font-weight: 700;
+}
+.choice__hint {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+/* =====================================================================
+   Texto rico (editor e leitura)
+   ===================================================================== */
+.rich > :first-child {
+  margin-top: 0;
+}
+.rich > :last-child {
+  margin-bottom: 0;
+}
+.rich p {
+  margin: 0 0 0.75em;
+}
+.rich h3 {
+  font-size: 1.25rem;
+  margin: 1em 0 0.4em;
+}
+.rich h4,
+.rich h2 {
+  font-size: 1.05rem;
+  margin: 1em 0 0.4em;
+}
+.rich ul,
+.rich ol {
+  margin: 0 0 0.75em;
+  padding-left: 1.5em;
+}
+.rich li > p {
+  margin: 0;
+}
+.rich blockquote {
+  margin: 0 0 0.75em;
+  padding: 4px 0 4px 14px;
+  border-left: 3px solid var(--accent);
+  color: var(--text-muted);
+}
+.rich code {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.9em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+}
+.rich pre {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+.rich pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.rich hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1em 0;
+}
+
+/* Posts no feed */
+.post__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 0.875rem;
+}
+.post__mission {
+  margin: 0 0 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent);
+}

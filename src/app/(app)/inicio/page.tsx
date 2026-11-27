@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Window } from '@/components/Window';
 import { Notice } from '@/components/Notice';
+import { RichText } from '@/components/RichText';
 import { createClient } from '@/lib/supabase/server';
 import { NOTICES, pickMessage } from '@/lib/messages';
+import { isPostBody, sanitizeDoc } from '@/lib/richtext';
 import { MissionCard } from './MissionCard';
 
 export const metadata: Metadata = { title: 'Início' };
@@ -11,13 +14,31 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 
 type FeedPost = {
   id: string;
-  body: { text?: string } | null;
+  author_id: string;
+  body: unknown;
+  visibility: 'private' | 'friends' | 'unlisted' | 'public';
   created_at: string;
   author: { username: string; display_name: string } | null;
+  mission: { prompt: string } | null;
 };
 
 const PAGE_SIZE = 20;
+const VIS_LABEL: Record<FeedPost['visibility'], string> = {
+  private: 'Privado',
+  friends: 'Amigos',
+  unlisted: 'Não listado',
+  public: 'Público',
+};
 const dateFmt = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Sao_Paulo' });
+
+function PostBodyView({ body }: { body: unknown }) {
+  if (isPostBody(body)) {
+    const doc = sanitizeDoc(body.doc); // defesa extra na leitura
+    if (doc) return <RichText doc={doc} />;
+  }
+  const text = typeof body === 'object' && body && 'text' in body ? String((body as { text: unknown }).text) : '';
+  return <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{text}</p>;
+}
 
 export default async function InicioPage({ searchParams }: Props) {
   const sp = await searchParams;
@@ -37,7 +58,9 @@ export default async function InicioPage({ searchParams }: Props) {
     // Cronológico reverso, sem ranqueamento. RLS já restringe a amigos, públicos e próprios.
     supabase
       .from('posts')
-      .select('id, body, created_at, author:profiles!posts_author_id_fkey(username, display_name)')
+      .select(
+        'id, author_id, body, visibility, created_at, author:profiles!posts_author_id_fkey(username, display_name), mission:missions(prompt)',
+      )
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE),
   ]);
@@ -56,20 +79,41 @@ export default async function InicioPage({ searchParams }: Props) {
       <Window title={name ? `Olá, ${name}` : 'Recentes'} icon="home">
         {posts.length > 0 ? (
           <ol className="stack" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-            {posts.map((post) => (
-              <li key={post.id} className="card">
-                <article>
-                  <p className="muted" style={{ margin: 0, fontSize: '0.875rem' }}>
-                    {post.author ? post.author.display_name || `@${post.author.username}` : 'Autor indisponível'} ·{' '}
-                    <time dateTime={post.created_at}>{dateFmt.format(new Date(post.created_at))}</time>
-                  </p>
-                  <p style={{ margin: '4px 0 0', whiteSpace: 'pre-wrap' }}>{post.body?.text}</p>
-                </article>
-              </li>
-            ))}
+            {posts.map((post) => {
+              const mine = post.author_id === userId;
+              const author = mine
+                ? 'Você'
+                : post.author
+                  ? post.author.display_name || `@${post.author.username}`
+                  : 'Autor indisponível';
+              return (
+                <li key={post.id} className="card">
+                  <article className="post">
+                    <header className="post__meta muted">
+                      <span>{author}</span>
+                      <span aria-hidden="true">·</span>
+                      <time dateTime={post.created_at}>{dateFmt.format(new Date(post.created_at))}</time>
+                      {mine && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span>{VIS_LABEL[post.visibility]}</span>
+                        </>
+                      )}
+                    </header>
+                    {post.mission && <p className="post__mission">Missão: {post.mission.prompt}</p>}
+                    <PostBodyView body={post.body} />
+                  </article>
+                </li>
+              );
+            })}
           </ol>
         ) : (
-          <p>Ainda não há posts por aqui. Adicione amigos ou escreva o seu primeiro.</p>
+          <div className="stack" style={{ justifyItems: 'start' }}>
+            <p style={{ margin: 0 }}>Ainda não há posts por aqui. Adicione amigos ou escreva o seu primeiro.</p>
+            <Link href="/criar/post" className="btn btn--primary">
+              Escrever um post
+            </Link>
+          </div>
         )}
         <p className="muted" style={{ textAlign: 'center', marginBottom: 0 }} role="status">
           Você está em dia.

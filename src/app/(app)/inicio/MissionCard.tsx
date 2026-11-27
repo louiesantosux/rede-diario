@@ -56,7 +56,7 @@ export function MissionCard({ id, date, prompt }: { id: string; date: string; pr
           Opcional. Responda quando quiser, ou não responda.
         </p>
         <div className="row">
-          <Link className="btn btn--primary" href={`/criar?missao=${id}`}>
+          <Link className="btn btn--primary" href={`/criar/post?missao=${id}`}>
             Escrever sobre isso
           </Link>
           <button type="button" className="btn btn--ghost" onClick={skip} disabled={state === 'leaving'}>

@@ -129,6 +129,7 @@ export const checks = [
   ['textMuted', 'surface', 4.5, 'texto secundário (AA)'],
   ['textMuted', 'surfaceAlt', 4.5, 'texto secundário em cartão (AA)'],
   ['accent', 'surface', 7, 'links (AAA)'],
+  ['accent', 'surfaceAlt', 7, 'links e destaques em cartão (AAA)'],
   ['onAccent', 'accent+btnShine', 7, 'botão primário, faixa de brilho (AAA)'],
   ['onAccent', 'accentDeep', 7, 'botão primário, base (AAA)'],
   ['titlebarText', 'titlebarFrom+titlebarShine', 7, 'título da janela, faixa de brilho (AAA)'],
