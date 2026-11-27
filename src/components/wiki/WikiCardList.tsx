@@ -25,9 +25,6 @@ export function WikiCardList({ wikis }: { wikis: WikiCard[] }) {
         {wikis.map((w) => (
           <li key={w.id} className="wiki-cards__row">
             <Link href={`/wiki/${w.id}`} className="wiki-card wiki-card--with-action">
-              <span className="wiki-card__swatch" style={{ background: w.bg, borderColor: w.accent }} aria-hidden="true">
-                <span style={{ background: w.surface }} />
-              </span>
               <span className="wiki-card__text">
                 <span className="wiki-card__title">{w.title}</span>
                 <span className="wiki-card__hint">{w.hint}</span>

@@ -3489,3 +3489,57 @@ a.start-menu__item:focus-visible {
   color: var(--w-link, var(--w-accent));
   text-decoration: underline;
 }
+
+/* Capas de playlist (quadradas) */
+.playlist-thumb {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 0;
+}
+.playlist-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.space-card__icon.playlist-thumb {
+  width: 48px;
+  height: 48px;
+}
+.playlist-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+.playlist-cover {
+  display: grid;
+  place-items: center;
+  width: 160px;
+  height: 160px;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  font-size: 2.5rem;
+  box-shadow: 0 8px 22px var(--shadow);
+}
+.playlist-cover--sm {
+  width: 96px;
+  height: 96px;
+  font-size: 1.6rem;
+}
+.playlist-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@media (max-width: 560px) {
+  .playlist-cover {
+    width: 120px;
+    height: 120px;
+  }
+}

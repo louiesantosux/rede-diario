@@ -10,9 +10,9 @@ import { NotesList, type Note } from '@/components/space/Mural';
 import { NoteForm } from '@/components/space/NoteForm';
 import { SpaceOrnaments } from '@/components/space/SpaceOrnaments';
 import { createClient } from '@/lib/supabase/server';
+import { autoCover } from '@/lib/playlistCover';
 import { getMediaViews, orderedViews } from '@/lib/media';
 import { docMediaIds, isPostBody, sanitizeDoc } from '@/lib/richtext';
-import { sanitizeTheme } from '@/lib/wikiTheme';
 import {
   MODULE_INFO,
   sanitizeSpaceTheme,
@@ -112,7 +112,7 @@ export default async function SpacePage({ params }: Props) {
     keys.has('wikis')
       ? supabase
           .from('wikis')
-          .select('id, title, description, theme')
+          .select('id, title, description')
           .eq('owner_id', s.id)
           .order('updated_at', { ascending: false })
           .then((r) => r.data ?? [])
@@ -128,7 +128,7 @@ export default async function SpacePage({ params }: Props) {
     keys.has('playlists')
       ? supabase
           .from('playlists')
-          .select('id, title, description')
+          .select('id, title, description, cover_media_id')
           .eq('owner_id', s.id)
           .order('updated_at', { ascending: false })
           .then((r) => r.data ?? [])
@@ -151,7 +151,17 @@ export default async function SpacePage({ params }: Props) {
   ]);
 
   const coverIds = boards.map((b) => (b.media_ids as string[])[0]).filter(Boolean);
+  const playlistCoverIds = playlists.map((p) => p.cover_media_id as string | null).filter((v): v is string => Boolean(v));
+  const firstTracks = playlists.length
+    ? (((await supabase.rpc('playlist_first_tracks', { ids: playlists.map((p) => p.id) })).data ?? []) as {
+        playlist_id: string;
+        source: string;
+        youtube_id: string | null;
+        cover_url: string | null;
+      }[])
+    : [];
   const media = await getMediaViews(supabase, [
+    ...playlistCoverIds,
     ...[s.avatar_media_id, s.bg_media_id].filter((v): v is string => Boolean(v)),
     ...(about ? docMediaIds(about) : []),
     ...coverIds,
@@ -201,11 +211,9 @@ export default async function SpacePage({ params }: Props) {
       wikis.length ? (
         <ul className="space-cards">
           {wikis.map((w) => {
-            const t = sanitizeTheme(w.theme);
             return (
               <li key={w.id}>
                 <Link href={`/wiki/${w.id}`} className="space-card">
-                  <span className="space-card__swatch" aria-hidden="true" style={{ background: t.bg, borderColor: t.accent }} />
                   <span>
                     <span className="space-card__title">{w.title}</span>
                     {w.description && <span className="space-card__hint">{w.description}</span>}
@@ -245,8 +253,18 @@ export default async function SpacePage({ params }: Props) {
           {playlists.map((p) => (
             <li key={p.id}>
               <Link href={`/playlist/${p.id}`} className="space-card">
-                <span className="space-card__icon" aria-hidden="true">
-                  <Icon name="music" />
+                <span className="space-card__icon playlist-thumb" aria-hidden="true">
+                  {(() => {
+                    const url =
+                      (p.cover_media_id && media[p.cover_media_id]?.url) ||
+                      autoCover(firstTracks.find((t) => t.playlist_id === p.id));
+                    return url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={url} alt="" loading="lazy" />
+                    ) : (
+                      <Icon name="music" />
+                    );
+                  })()}
                 </span>
                 <span>
                   <span className="space-card__title">{p.title}</span>

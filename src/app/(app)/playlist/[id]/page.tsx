@@ -7,6 +7,9 @@ import { PlaylistPlayer, type Track } from '@/components/PlaylistPlayer';
 import { createClient } from '@/lib/supabase/server';
 import { deletePlaylist, moveTrack, removeTrack, updatePlaylist } from '../actions';
 import { AddTrackForm } from './AddTrackForm';
+import { PlaylistCover } from './PlaylistCover';
+import { getMediaViews } from '@/lib/media';
+import { autoCover } from '@/lib/playlistCover';
 
 export const metadata: Metadata = { title: 'Playlist' };
 
@@ -25,7 +28,7 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
 
   const { data: playlist } = await supabase
     .from('playlists')
-    .select('id, owner_id, title, description, visibility')
+    .select('id, owner_id, title, description, visibility, cover_media_id')
     .eq('id', id)
     .maybeSingle();
   if (!playlist) notFound();
@@ -37,6 +40,11 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
     .order('position', { ascending: true });
   const tracks = (rows ?? []) as Track[];
   const isOwner = playlist.owner_id === auth.user?.id;
+  const coverId = (playlist.cover_media_id as string | null) ?? null;
+  const coverViews = coverId ? await getMediaViews(supabase, [coverId]) : {};
+  const custom = coverId && coverViews[coverId] ? { id: coverId, url: coverViews[coverId].url } : null;
+  const auto = autoCover(tracks[0]);
+  const coverUrl = custom?.url ?? auto;
 
   return (
     <main id="conteudo" className="page page--wide">
@@ -47,7 +55,18 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
               ok={`${importadas} faixas importadas.${ignoradas ? ` ${ignoradas} ficaram de fora (privadas, removidas ou acima do limite).` : ''}`}
             />
           )}
-          {playlist.description && <p style={{ margin: 0 }}>{playlist.description}</p>}
+          <div className="playlist-head">
+            <span className="playlist-cover" aria-hidden="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {coverUrl ? <img src={coverUrl} alt="" /> : <span>♪</span>}
+            </span>
+            <div className="stack" style={{ gap: 4 }}>
+              <p className="playlist-head__count muted" style={{ margin: 0 }}>
+                Playlist · {tracks.length === 1 ? '1 item' : `${tracks.length} itens`}
+              </p>
+              {playlist.description && <p style={{ margin: 0 }}>{playlist.description}</p>}
+            </div>
+          </div>
           <PlaylistPlayer tracks={tracks} title={playlist.title} />
           <p className="muted" style={{ margin: 0, fontSize: '0.8125rem' }}>
             Nada toca sozinho. Ao escolher uma faixa, as seguintes tocam em sequência no miniplayer.
@@ -115,6 +134,10 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
               </ol>
             </Window>
           )}
+
+          <Window title="Capa" icon="image">
+            <PlaylistCover playlistId={playlist.id} custom={custom} auto={auto} />
+          </Window>
 
           <Window title="Ajustes da playlist" icon="gear">
             <div className="stack">

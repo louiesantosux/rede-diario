@@ -252,3 +252,17 @@ export async function deletePlaylist(form: FormData) {
   await supabase.from('playlists').delete().eq('id', id);
   redirect('/meu-espaco?aviso=playlist-excluida');
 }
+
+/** Capa escolhida pelo dono (imagem da galeria). null volta à capa automática. Salva na hora. */
+export async function setPlaylistCover(playlistId: string, mediaId: string | null): Promise<{ ok: boolean; error?: string }> {
+  if (!UUID_RE.test(playlistId) || (mediaId !== null && !UUID_RE.test(mediaId))) return { ok: false, error: 'Imagem inválida.' };
+  const supabase = await createClient();
+  const { error } = await supabase.from('playlists').update({ cover_media_id: mediaId }).eq('id', playlistId);
+  if (error) {
+    console.error('[setPlaylistCover]', error.code, error.message);
+    return { ok: false, error: 'Não foi possível salvar a capa.' };
+  }
+  revalidatePath(`/playlist/${playlistId}`);
+  revalidatePath('/meu-espaco');
+  return { ok: true };
+}

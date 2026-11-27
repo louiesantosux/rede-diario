@@ -9,6 +9,7 @@ import { sanitizeTheme } from '@/lib/wikiTheme';
 import { WikiCardList } from '@/components/wiki/WikiCardList';
 import { MediaGallery } from '@/components/MediaGallery';
 import { getMediaViews, orderedViews } from '@/lib/media';
+import { autoCover } from '@/lib/playlistCover';
 import { NotesList, type Note } from '@/components/space/Mural';
 import { SiteAppearance } from '@/components/space/SiteAppearance';
 
@@ -52,7 +53,7 @@ export default async function MeuEspacoPage({ searchParams }: Props) {
     supabase.from('media').select('id').eq('owner_id', userId).order('created_at', { ascending: false }).limit(12),
     supabase
       .from('playlists')
-      .select('id, title, description, visibility')
+      .select('id, title, description, visibility, cover_media_id')
       .eq('owner_id', userId)
       .order('updated_at', { ascending: false }),
     supabase.from('spaces').select('avatar_media_id').eq('owner_id', userId).maybeSingle(),
@@ -62,7 +63,17 @@ export default async function MeuEspacoPage({ searchParams }: Props) {
   const avatarId = (space?.avatar_media_id as string | null) ?? null;
   const recentIds = (recent ?? []).map((m) => m.id as string);
   const coverIds = (boards ?? []).map((b) => (b.media_ids as string[])[0]).filter(Boolean);
-  const media = await getMediaViews(supabase, [...recentIds, ...coverIds, ...(avatarId ? [avatarId] : [])]);
+  const playlistCoverIds = (playlists ?? []).map((p) => p.cover_media_id as string | null).filter((v): v is string => Boolean(v));
+  const [media, firstTracks] = await Promise.all([
+    getMediaViews(supabase, [...recentIds, ...coverIds, ...playlistCoverIds, ...(avatarId ? [avatarId] : [])]),
+    playlists?.length
+      ? supabase
+          .rpc('playlist_first_tracks', { ids: playlists.map((p) => p.id) })
+          .then((r) => (r.data ?? []) as { playlist_id: string; source: string; youtube_id: string | null; cover_url: string | null }[])
+      : Promise.resolve([]),
+  ]);
+  const playlistCover = (p: { id: string; cover_media_id: string | null }) =>
+    (p.cover_media_id && media[p.cover_media_id]?.url) || autoCover(firstTracks.find((t) => t.playlist_id === p.id));
   const avatar = avatarId ? media[avatarId] : undefined;
 
   return (
@@ -169,8 +180,13 @@ export default async function MeuEspacoPage({ searchParams }: Props) {
             {playlists.map((p) => (
               <li key={p.id}>
                 <Link href={`/playlist/${p.id}`} className="wiki-card">
-                  <span className="wiki-card__cover event-date" aria-hidden="true">
-                    <Icon name="music" />
+                  <span className="wiki-card__cover playlist-thumb" aria-hidden="true">
+                    {playlistCover(p) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={playlistCover(p)!} alt="" loading="lazy" />
+                    ) : (
+                      <Icon name="music" />
+                    )}
                   </span>
                   <span className="wiki-card__text">
                     <span className="wiki-card__title">{p.title}</span>
