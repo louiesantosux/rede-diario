@@ -41,7 +41,7 @@ export function PlaylistPlayer({ tracks, title }: { tracks: Track[]; title: stri
                 <img src={thumbUrl(t.youtube_id)} alt="" width={64} height={36} loading="lazy" />
                 <span className="tracklist__text">
                   <span className="tracklist__title">{t.title}</span>
-                  {t.author && <span className="tracklist__author">{t.author}</span>}
+                  {t.author && <span className="tracklist__author">{t.author.replace(/ - Topic$/, '')}</span>}
                 </span>
                 {playing && <span className="tracklist__now">{music.status === 'playing' ? 'Tocando' : 'Pausada'}</span>}
               </button>

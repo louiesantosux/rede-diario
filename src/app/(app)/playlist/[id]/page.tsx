@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Window } from '@/components/Window';
 import { Notice } from '@/components/Notice';
+import { Icon } from '@/components/Icon';
 import { PlaylistPlayer, type Track } from '@/components/PlaylistPlayer';
 import { createClient } from '@/lib/supabase/server';
 import { deletePlaylist, moveTrack, removeTrack, updatePlaylist } from '../actions';
@@ -62,36 +63,46 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
 
           {tracks.length > 0 && (
             <Window title="Organizar faixas" icon="list">
-              <ol className="person-list">
+              <ol className="track-rows">
                 {tracks.map((t, i) => (
-                  <li key={t.id} className="person">
-                    <span>
-                      {i + 1}. <strong>{t.title}</strong>
-                      {t.author && <span className="muted"> · {t.author}</span>}
+                  <li key={t.id} className="track-row">
+                    <span className="track-row__text">
+                      <span className="track-row__num">{i + 1}.</span>
+                      <span>
+                        <strong>{t.title}</strong>
+                        {t.author && <span className="track-row__author">{t.author.replace(/ - Topic$/, '')}</span>}
+                      </span>
                     </span>
-                    <span className="row" style={{ gap: 2 }}>
-                      <form action={moveTrack}>
+                    <span className="track-row__actions">
+                      <form action={moveTrack} className="track-row__form">
                         <input type="hidden" name="playlistId" value={playlist.id} />
                         <input type="hidden" name="trackId" value={t.id} />
-                        <button type="submit" name="dir" value="up" className="toolbar__btn" disabled={i === 0} aria-label={`Subir ${t.title}`}>
+                        <button
+                          type="submit"
+                          name="dir"
+                          value="up"
+                          className="track-row__btn"
+                          disabled={i === 0}
+                          aria-label={`Subir ${t.title}`}
+                        >
                           ↑
                         </button>
                         <button
                           type="submit"
                           name="dir"
                           value="down"
-                          className="toolbar__btn"
+                          className="track-row__btn"
                           disabled={i === tracks.length - 1}
                           aria-label={`Descer ${t.title}`}
                         >
                           ↓
                         </button>
                       </form>
-                      <form action={removeTrack}>
+                      <form action={removeTrack} className="track-row__form">
                         <input type="hidden" name="playlistId" value={playlist.id} />
                         <input type="hidden" name="trackId" value={t.id} />
-                        <button type="submit" className="toolbar__btn" aria-label={`Remover ${t.title}`}>
-                          ✕
+                        <button type="submit" className="track-row__btn track-row__btn--remove" aria-label={`Remover ${t.title}`}>
+                          <Icon name="trash" />
                         </button>
                       </form>
                     </span>
