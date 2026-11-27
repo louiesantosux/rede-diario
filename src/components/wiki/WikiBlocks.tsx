@@ -23,6 +23,22 @@ function postExcerpt(body: unknown) {
   return rest.length > 220 ? `${rest.slice(0, 220)}…` : rest;
 }
 
+/** Link de um item da coleção: mostra só o site (o endereço completo fica no título). */
+function ItemLink({ href, name }: { href: string; name: string }) {
+  let host = 'link';
+  try {
+    host = new URL(href).hostname.replace(/^www\./, '');
+  } catch {
+    /* mantém "link" */
+  }
+  return (
+    <a className="item-link" href={href} target="_blank" rel="noopener noreferrer nofollow ugc" title={href}>
+      Ver em {host} <span aria-hidden="true">↗</span>
+      <span className="sr-only"> (abre {name} em outra aba)</span>
+    </a>
+  );
+}
+
 export function WikiBlocks({
   blocks,
   posts,
@@ -84,6 +100,7 @@ export function WikiBlocks({
                                   <span className="wish-card__body">
                                     <span className="wish-card__name">{it.name}</span>
                                     {it.note && <span className="wish-card__note">{it.note}</span>}
+                                    {it.link && <ItemLink href={it.link} name={it.name} />}
                                   </span>
                                 </li>
                               );
@@ -95,6 +112,7 @@ export function WikiBlocks({
                               <li key={it.id} className="collection__item">
                                 <span className="collection__name">{it.name}</span>
                                 {it.note && <span className="collection__note">{it.note}</span>}
+                                {it.link && <ItemLink href={it.link} name={it.name} />}
                               </li>
                             ))}
                           </ul>

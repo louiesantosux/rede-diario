@@ -347,7 +347,7 @@ function CollectionEditor({
   }, [imageKey, vitrine]);
 
   const addItem = () =>
-    setItems([...block.items, { id: newId(), name: '', status: block.statuses[0], note: '', mediaId: null }]);
+    setItems([...block.items, { id: newId(), name: '', status: block.statuses[0], note: '', mediaId: null, link: '' }]);
   const removeItem = (id: string) => setItems(block.items.filter((x) => x.id !== id));
 
   return (
@@ -362,17 +362,6 @@ function CollectionEditor({
             value={block.title}
             onChange={(e) => onPatch({ title: e.target.value } as Partial<Block>)}
           />
-        </div>
-        <div className="field" style={{ flex: '0 1 230px' }}>
-          <label htmlFor={`cl-${block.id}`}>Formato</label>
-          <select
-            id={`cl-${block.id}`}
-            value={block.layout}
-            onChange={(e) => onPatch({ layout: e.target.value } as Partial<Block>)}
-          >
-            <option value="lista">Lista simples</option>
-            <option value="vitrine">Vitrine (mini wishlist com foto)</option>
-          </select>
         </div>
         <div className="field" style={{ flex: '1 1 240px' }}>
           <label htmlFor={`cs-${block.id}`}>Status (separados por vírgula)</label>
@@ -393,6 +382,30 @@ function CollectionEditor({
           />
         </div>
       </div>
+
+      <fieldset className="format-cards">
+        <legend>Formato da coleção</legend>
+        {(
+          [
+            { id: 'vitrine', title: 'Vitrine', hint: 'Cartões com imagem, nome, texto curto e link. Ideal para wishlist.' },
+            { id: 'lista', title: 'Lista simples', hint: 'Só nome, status e uma nota, sem imagem.' },
+          ] as const
+        ).map((f) => (
+          <label key={f.id} className="format-card">
+            <input
+              type="radio"
+              name={`layout-${block.id}`}
+              value={f.id}
+              checked={block.layout === f.id}
+              onChange={() => onPatch({ layout: f.id } as Partial<Block>)}
+            />
+            <span>
+              <strong>{f.title}</strong>
+              <span className="muted">{f.hint}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
 
       {vitrine && block.items.length > 0 && (
         <ul className="wish-edit">
@@ -462,6 +475,18 @@ function CollectionEditor({
                     onChange={(e) => updateItem(it.id, { note: e.target.value })}
                   />
                 </div>
+                <div className="field">
+                  <label htmlFor={`wl-${it.id}`}>Link (opcional)</label>
+                  <input
+                    id={`wl-${it.id}`}
+                    type="url"
+                    inputMode="url"
+                    maxLength={2000}
+                    value={it.link}
+                    placeholder="https://loja.com.br/produto"
+                    onChange={(e) => updateItem(it.id, { link: e.target.value })}
+                  />
+                </div>
               </div>
               {picking === it.id && (
                 <div className="wish-edit__picker">
@@ -488,6 +513,7 @@ function CollectionEditor({
               <th scope="col">Item</th>
               <th scope="col">Status</th>
               <th scope="col">Nota</th>
+              <th scope="col">Link</th>
               <th scope="col">
                 <span className="sr-only">Ações</span>
               </th>
@@ -525,6 +551,16 @@ function CollectionEditor({
                     maxLength={500}
                     value={it.note}
                     onChange={(e) => updateItem(it.id, { note: e.target.value })}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="url"
+                    inputMode="url"
+                    aria-label={`Link do item ${i + 1}`}
+                    maxLength={2000}
+                    value={it.link}
+                    onChange={(e) => updateItem(it.id, { link: e.target.value })}
                   />
                 </td>
                 <td>

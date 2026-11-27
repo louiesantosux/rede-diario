@@ -1,8 +1,16 @@
-import { docMediaIds, sanitizeDoc, type RTDoc } from './richtext';
+import { docMediaIds, safeHref, sanitizeDoc, type RTDoc } from './richtext';
 
 // Blocos de uma página de wiki. Salvos como JSON e validados no servidor.
 
-export type CollectionItem = { id: string; name: string; status: string; note: string; mediaId: string | null };
+export type CollectionItem = {
+  id: string;
+  name: string;
+  status: string;
+  note: string;
+  mediaId: string | null;
+  /** Link opcional (loja, referência). Só http/https. */
+  link: string;
+};
 
 /** lista: tabela simples. vitrine: cartões com imagem, nome e texto curto (mini wishlist). */
 export type CollectionLayout = 'lista' | 'vitrine';
@@ -50,7 +58,7 @@ export function newBlock(type: Block['type']): Block {
         title: 'Minha coleção',
         statuses: [...DEFAULT_STATUSES],
         items: [],
-        layout: 'lista',
+        layout: 'vitrine',
       };
     case 'divider':
       return { id: newId(), type: 'divider', style: 'estrelas' };
@@ -105,13 +113,25 @@ export function sanitizeBlocks(raw: unknown): Block[] {
         const items = (Array.isArray(b.items) ? b.items : [])
           .slice(0, MAX_ITEMS)
           .filter(isObj)
-          .map((it) => ({
-            id: cleanId(it.id),
-            name: str(it.name, 120),
-            status: safeStatuses.includes(str(it.status, 30)) ? str(it.status, 30) : safeStatuses[0],
-            note: str(it.note, 500),
-            mediaId: typeof it.mediaId === 'string' && UUID_RE.test(it.mediaId) ? it.mediaId : null,
-          }))
+          .map((it) => {
+            let note = str(it.note, 500);
+            let rawLink = str(it.link, 2000);
+            if (rawLink && !/^https?:\/\//i.test(rawLink) && /^[\w-]+(\.[\w-]+)+/.test(rawLink)) rawLink = `https://${rawLink}`;
+            let link = safeHref(rawLink) ?? '';
+            // Nota que é só um link (como era feito antes do campo próprio) vira o link do item.
+            if (!link && /^https?:\/\/\S+$/i.test(note) && safeHref(note)) {
+              link = safeHref(note) ?? '';
+              note = '';
+            }
+            return {
+              id: cleanId(it.id),
+              name: str(it.name, 120),
+              status: safeStatuses.includes(str(it.status, 30)) ? str(it.status, 30) : safeStatuses[0],
+              note,
+              mediaId: typeof it.mediaId === 'string' && UUID_RE.test(it.mediaId) ? it.mediaId : null,
+              link,
+            };
+          })
           .filter((it) => it.name);
         out.push({
           id,

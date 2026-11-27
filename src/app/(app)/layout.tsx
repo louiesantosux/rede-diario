@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { Taskbar } from '@/components/Taskbar';
 import { PrefsSync } from '@/components/PrefsSync';
 import { MusicProvider } from '@/components/music/MusicProvider';
+import { EmojiAssist } from '@/components/EmojiAssist';
 import { createClient } from '@/lib/supabase/server';
 import type { A11yPrefs } from '@/lib/prefs';
 
@@ -18,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <PrefsSync saved={(profile?.a11y_prefs ?? null) as Partial<A11yPrefs> | null} ui={profile?.theme ?? null} />
       {children}
       <Taskbar />
+      <EmojiAssist />
     </MusicProvider>
   );
 }

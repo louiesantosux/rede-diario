@@ -235,7 +235,7 @@ export function ColorPicker({ value, onChange, label, compact = false }: Props) 
   const hueColor = hsvToHex({ h: hsv.h, s: 1, v: 1 });
 
   return (
-    <div className={`cpick${compact ? ' cpick--compact' : ''}`} ref={wrap}>
+    <div className={`cpick${compact ? ' cpick--compact' : ''}`} ref={wrap} data-no-emoji>
       <button
         type="button"
         className="cpick__trigger"
