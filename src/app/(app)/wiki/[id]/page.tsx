@@ -3,9 +3,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Window } from '@/components/Window';
 import { Icon } from '@/components/Icon';
-import { WikiBlocks, type BlogPost } from '@/components/wiki/WikiBlocks';
+import { WikiBlocks, type BlockPlaylist, type BlogPost } from '@/components/wiki/WikiBlocks';
 import { createClient } from '@/lib/supabase/server';
-import { sanitizeBlocks } from '@/lib/blocks';
+import { blockMediaIds, blockPlaylistIds, sanitizeBlocks } from '@/lib/blocks';
+import { getMediaViews } from '@/lib/media';
 import { sanitizeTheme, themeStyle } from '@/lib/wikiTheme';
 import { createPage } from '../actions';
 
@@ -63,6 +64,28 @@ export default async function WikiPage({ params, searchParams }: Props) {
       .order('created_at', { ascending: false })
       .limit(30);
     posts = data ?? [];
+  }
+
+  const media = await getMediaViews(supabase, blockMediaIds(blocks));
+
+  const playlists: Record<string, BlockPlaylist> = {};
+  const playlistIds = blockPlaylistIds(blocks);
+  if (playlistIds.length) {
+    const [{ data: pls }, { data: tracks }] = await Promise.all([
+      supabase.from('playlists').select('id, title').in('id', playlistIds),
+      supabase
+        .from('playlist_tracks')
+        .select('id, playlist_id, youtube_id, title, author')
+        .in('playlist_id', playlistIds)
+        .order('position', { ascending: true }),
+    ]);
+    for (const pl of pls ?? []) {
+      playlists[pl.id] = {
+        id: pl.id,
+        title: pl.title,
+        tracks: (tracks ?? []).filter((t) => t.playlist_id === pl.id),
+      };
+    }
   }
 
   return (
@@ -129,7 +152,7 @@ export default async function WikiPage({ params, searchParams }: Props) {
           {current ? (
             <article className="wiki-page">
               <h2 className="wiki-page__title">{current.title}</h2>
-              <WikiBlocks blocks={blocks} posts={posts} />
+              <WikiBlocks blocks={blocks} posts={posts} media={media} playlists={playlists} />
             </article>
           ) : (
             <p className="wiki-empty">Nenhuma página visível nesta wiki.</p>

@@ -8,7 +8,9 @@ export type Block =
   | { id: string; type: 'text'; doc: RTDoc }
   | { id: string; type: 'collection'; title: string; statuses: string[]; items: CollectionItem[] }
   | { id: string; type: 'divider'; style: 'linha' | 'estrelas' | 'pontos' }
-  | { id: string; type: 'blog' };
+  | { id: string; type: 'blog' }
+  | { id: string; type: 'images'; mediaIds: string[]; layout: 'grade' | 'mosaico' }
+  | { id: string; type: 'playlist'; playlistId: string | null };
 
 export const MAX_BLOCKS = 60;
 export const MAX_ITEMS = 300;
@@ -17,6 +19,8 @@ export const DEFAULT_STATUSES = ['Tenho', 'Quero', 'Já tive'];
 export const newId = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 
 const ID_RE = /^[a-z0-9]{1,24}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const MAX_BLOCK_IMAGES = 30;
 const cleanId = (v: unknown) => (typeof v === 'string' && ID_RE.test(v) ? v : newId());
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 type Raw = Record<string, unknown>;
@@ -34,7 +38,20 @@ export function newBlock(type: Block['type']): Block {
       return { id: newId(), type: 'divider', style: 'estrelas' };
     case 'blog':
       return { id: newId(), type: 'blog' };
+    case 'images':
+      return { id: newId(), type: 'images', mediaIds: [], layout: 'mosaico' };
+    case 'playlist':
+      return { id: newId(), type: 'playlist', playlistId: null };
   }
+}
+
+export function blockPlaylistIds(blocks: Block[]): string[] {
+  return Array.from(new Set(blocks.flatMap((b) => (b.type === 'playlist' && b.playlistId ? [b.playlistId] : []))));
+}
+
+/** Todas as imagens usadas numa página (para a tabela page_media). */
+export function blockMediaIds(blocks: Block[]): string[] {
+  return Array.from(new Set(blocks.flatMap((b) => (b.type === 'images' ? b.mediaIds : []))));
 }
 
 export function sanitizeBlocks(raw: unknown): Block[] {
@@ -75,6 +92,20 @@ export function sanitizeBlocks(raw: unknown): Block[] {
       }
       case 'blog':
         out.push({ id, type: 'blog' });
+        break;
+      case 'images': {
+        const mediaIds = Array.from(
+          new Set((Array.isArray(b.mediaIds) ? b.mediaIds : []).filter((m): m is string => typeof m === 'string' && UUID_RE.test(m))),
+        ).slice(0, MAX_BLOCK_IMAGES);
+        out.push({ id, type: 'images', mediaIds, layout: b.layout === 'grade' ? 'grade' : 'mosaico' });
+        break;
+      }
+      case 'playlist':
+        out.push({
+          id,
+          type: 'playlist',
+          playlistId: typeof b.playlistId === 'string' && UUID_RE.test(b.playlistId) ? b.playlistId : null,
+        });
         break;
     }
   }

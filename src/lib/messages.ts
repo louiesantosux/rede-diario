@@ -27,6 +27,9 @@ export const NOTICES: Record<string, string> = {
   'post-publicado': 'Post publicado.',
   'post-privado': 'Guardado no seu diário. Só você pode ver.',
   'wiki-excluida': 'Wiki excluída.',
+  'imagens-salvas': 'Imagens guardadas na sua galeria.',
+  'playlist-excluida': 'Playlist excluída.',
+  'moodboard-excluido': 'Moodboard excluído. As fotos continuam na galeria.',
 };
 
 export function pickMessage(map: Record<string, string>, key: string | string[] | undefined) {

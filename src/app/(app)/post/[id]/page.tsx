@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Window } from '@/components/Window';
 import { RichText } from '@/components/RichText';
+import { MediaGallery } from '@/components/MediaGallery';
+import { getMediaViews, orderedViews } from '@/lib/media';
 import { createClient } from '@/lib/supabase/server';
 import { isPostBody, sanitizeDoc } from '@/lib/richtext';
 import { ReplyForm } from './ReplyForm';
@@ -22,7 +24,7 @@ export default async function PostPage({ params }: Props) {
   const { data: post } = await supabase
     .from('posts')
     .select(
-      'id, author_id, body, visibility, reply_policy, created_at, wiki_id, author:profiles!posts_author_id_fkey(username, display_name), mission:missions(prompt), wiki:wikis(id, title)',
+      'id, author_id, body, visibility, reply_policy, media_ids, created_at, wiki_id, author:profiles!posts_author_id_fkey(username, display_name), mission:missions(prompt), wiki:wikis(id, title)',
     )
     .eq('id', id)
     .maybeSingle();
@@ -33,12 +35,15 @@ export default async function PostPage({ params }: Props) {
     author_id: string;
     body: unknown;
     reply_policy: 'friends' | 'everyone' | 'nobody';
+    media_ids: string[] | null;
     created_at: string;
     author: { username: string; display_name: string } | null;
     mission: { prompt: string } | null;
     wiki: { id: string; title: string } | null;
   };
   const mine = p.author_id === userId;
+  const mediaIds = p.media_ids ?? [];
+  const gallery = orderedViews(mediaIds, await getMediaViews(supabase, mediaIds));
   const doc = isPostBody(p.body) ? sanitizeDoc(p.body.doc) : null;
 
   let replies: { id: string; body: string; created_at: string; sender: { username: string; display_name: string } | null }[] = [];
@@ -79,6 +84,7 @@ export default async function PostPage({ params }: Props) {
           </p>
           {p.mission && <p className="post__mission">Missão: {p.mission.prompt}</p>}
           {doc ? <RichText doc={doc} /> : <p>{isPostBody(p.body) ? p.body.text : ''}</p>}
+          <MediaGallery items={gallery} />
         </article>
       </Window>
 

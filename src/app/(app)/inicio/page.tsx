@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { Window } from '@/components/Window';
 import { Notice } from '@/components/Notice';
 import { RichText } from '@/components/RichText';
+import { MediaGallery } from '@/components/MediaGallery';
+import { getMediaViews, orderedViews } from '@/lib/media';
 import { createClient } from '@/lib/supabase/server';
 import { NOTICES, pickMessage } from '@/lib/messages';
 import { isPostBody, sanitizeDoc } from '@/lib/richtext';
@@ -17,6 +19,7 @@ type FeedPost = {
   author_id: string;
   body: unknown;
   visibility: 'private' | 'friends' | 'unlisted' | 'public';
+  media_ids: string[] | null;
   created_at: string;
   author: { username: string; display_name: string } | null;
   mission: { prompt: string } | null;
@@ -59,12 +62,16 @@ export default async function InicioPage({ searchParams }: Props) {
     supabase
       .from('posts')
       .select(
-        'id, author_id, body, visibility, created_at, author:profiles!posts_author_id_fkey(username, display_name), mission:missions(prompt)',
+        'id, author_id, body, visibility, media_ids, created_at, author:profiles!posts_author_id_fkey(username, display_name), mission:missions(prompt)',
       )
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE),
   ]);
   const posts = (postRows ?? []) as unknown as FeedPost[];
+  const media = await getMediaViews(
+    supabase,
+    posts.flatMap((p) => p.media_ids ?? []),
+  );
 
   const showMission = (profile?.wellbeing_prefs as { missions?: boolean } | null)?.missions !== false;
   const name = profile?.display_name || (profile ? `@${profile.username}` : '');
@@ -104,6 +111,7 @@ export default async function InicioPage({ searchParams }: Props) {
                     </header>
                     {post.mission && <p className="post__mission">Missão: {post.mission.prompt}</p>}
                     <PostBodyView body={post.body} />
+                    <MediaGallery items={orderedViews(post.media_ids ?? [], media)} />
                   </article>
                 </li>
               );

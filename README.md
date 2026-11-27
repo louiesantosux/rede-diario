@@ -19,8 +19,10 @@ Rede social mental-health friendly em formato de diário: wikis de interesses, m
 ### 1. Supabase
 
 1. Crie um projeto em [supabase.com](https://supabase.com) (região São Paulo, `sa-east-1`).
-2. Em **SQL Editor**, cole e execute `supabase/migrations/0001_init.sql`.
+2. Em **SQL Editor**, cole e execute, nesta ordem, o conteúdo de:
+   `0001_init.sql`, `0002_media.sql`, `0003_events.sql`, `0004_playlists.sql` (pasta `supabase/migrations`).
    Alternativa com CLI: `supabase link` e depois `supabase db push`.
+   Agende diariamente em **Integrations → Cron**: `select public.purge_old_event_locations();`
 3. Em **Authentication → URL Configuration**:
    - Site URL: `http://localhost:3000` (depois, o domínio da Vercel)
    - Redirect URLs: `http://localhost:3000/**` e `https://SEU-DOMINIO/**`
@@ -74,13 +76,14 @@ As cores ficam somente em `scripts/tokens.mjs`. O comando `npm run themes` calcu
 | Respostas a posts | Apenas quem respondeu e o autor do post |
 | Mensagens | Apenas os dois participantes; só amigos podem enviar |
 
+## Já entregue
+
+Posts com texto rico e missões · wikis com blocos (texto, coleção, imagens, playlist, divisor, blog) e tema com verificação de contraste · imagens com editor e filtros, sem EXIF · moodboards · encontros privados no mapa · amigos · playlists do YouTube · respostas privadas a posts.
+
 ## Próximas etapas
 
 | Etapa | Entrega |
 | --- | --- |
 | 1b | 2FA por app autenticador, confirmação de login em dispositivo novo por e-mail, login por telefone, lista de sessões |
-| 2 | Meu espaço: perfil customizável, wikis, editor de blocos, coleções, posts e respostas às missões |
-| 3 | Moodboards, upload com remoção de EXIF/GPS e editor de imagem com filtros de cor e luz |
-| 4 | Amigos, mensagens em tempo real, respostas privadas, privacidade, denúncias |
-| 5 | Playlists com YouTube |
-| 6 | Eventos privados no mapa |
+| 4 | Mensagens privadas em tempo real, bloqueio, denúncias, ajustes de privacidade e bem-estar |
+| — | Links de compartilhamento para conteúdo não listado, recorte de imagem, colagem livre no moodboard |

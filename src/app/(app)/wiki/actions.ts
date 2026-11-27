@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { sanitizeBlocks, templatePages, TEMPLATES, type TemplateId } from '@/lib/blocks';
+import { blockMediaIds, sanitizeBlocks, templatePages, TEMPLATES, type TemplateId } from '@/lib/blocks';
 import { THEME_PRESETS, sanitizeTheme, themePasses } from '@/lib/wikiTheme';
 
 export type FormState = { error?: string; ok?: string } | undefined;
@@ -87,6 +87,19 @@ export async function savePage(_prev: FormState, form: FormData): Promise<FormSt
   if (error) {
     console.error('[savePage]', error.code, error.message);
     return { error: 'Não foi possível salvar. Tente novamente.' };
+  }
+
+  // Mantém o vínculo das imagens com a página (define quem pode vê-las).
+  const mediaIds = blockMediaIds(blocks);
+  await supabase.from('page_media').delete().eq('page_id', pageId);
+  if (mediaIds.length) {
+    const { error: mediaError } = await supabase
+      .from('page_media')
+      .insert(mediaIds.map((media_id) => ({ page_id: pageId, media_id })));
+    if (mediaError) {
+      console.error('[savePage/media]', mediaError.code, mediaError.message);
+      return { error: 'A página foi salva, mas algumas imagens não puderam ser vinculadas.' };
+    }
   }
   revalidatePath(`/wiki/${current.wiki_id}`);
   return { ok: 'Página salva.' };

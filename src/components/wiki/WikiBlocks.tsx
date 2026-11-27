@@ -1,9 +1,13 @@
 import Link from 'next/link';
+import { MediaGallery } from '@/components/MediaGallery';
+import { PlaylistPlayer, type Track } from '@/components/PlaylistPlayer';
+import { orderedViews, type MediaView } from '@/lib/media';
 import { RichText } from '@/components/RichText';
 import type { Block } from '@/lib/blocks';
 import { docText, isPostBody } from '@/lib/richtext';
 
 export type BlogPost = { id: string; body: unknown; created_at: string };
+export type BlockPlaylist = { id: string; title: string; tracks: Track[] };
 
 const dateFmt = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long', timeZone: 'America/Sao_Paulo' });
 
@@ -19,7 +23,17 @@ function postExcerpt(body: unknown) {
   return rest.length > 220 ? `${rest.slice(0, 220)}…` : rest;
 }
 
-export function WikiBlocks({ blocks, posts }: { blocks: Block[]; posts: BlogPost[] }) {
+export function WikiBlocks({
+  blocks,
+  posts,
+  media = {},
+  playlists = {},
+}: {
+  blocks: Block[];
+  posts: BlogPost[];
+  media?: Record<string, MediaView>;
+  playlists?: Record<string, BlockPlaylist>;
+}) {
   if (blocks.length === 0) return <p className="wiki-empty">Esta página ainda está vazia.</p>;
 
   return (
@@ -63,6 +77,24 @@ export function WikiBlocks({ blocks, posts }: { blocks: Block[]; posts: BlogPost
                 )}
               </section>
             );
+
+          case 'images':
+            return (
+              <MediaGallery key={block.id} items={orderedViews(block.mediaIds, media)} layout={block.layout} />
+            );
+
+          case 'playlist': {
+            const pl = block.playlistId ? playlists[block.playlistId] : undefined;
+            if (!pl) return null;
+            return (
+              <section key={block.id} className="wiki-playlist" aria-label={`Playlist ${pl.title}`}>
+                <h3 className="collection__title">
+                  <Link href={`/playlist/${pl.id}`}>{pl.title}</Link>
+                </h3>
+                <PlaylistPlayer tracks={pl.tracks} title={pl.title} />
+              </section>
+            );
+          }
 
           case 'blog':
             return (

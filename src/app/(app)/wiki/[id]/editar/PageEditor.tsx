@@ -6,7 +6,9 @@ import { Window } from '@/components/Window';
 import { Icon } from '@/components/Icon';
 import { Notice } from '@/components/Notice';
 import { RichEditor } from '@/components/editor/RichEditor';
-import { newBlock, newId, type Block, type CollectionItem } from '@/lib/blocks';
+import { ImagePicker } from '@/components/wiki/ImagePicker';
+import { PlaylistPicker } from '@/components/wiki/PlaylistPicker';
+import { MAX_BLOCK_IMAGES, newBlock, newId, type Block, type CollectionItem } from '@/lib/blocks';
 import { deletePage, savePage, type FormState } from '../../actions';
 
 type Visibility = 'private' | 'friends' | 'unlisted' | 'public';
@@ -24,11 +26,15 @@ const BLOCK_LABEL: Record<Block['type'], string> = {
   collection: 'Coleção',
   divider: 'Divisor',
   blog: 'Blog',
+  images: 'Imagens',
+  playlist: 'Playlist',
 };
 
 const ADDABLE: { type: Block['type']; label: string }[] = [
   { type: 'text', label: 'Texto' },
   { type: 'collection', label: 'Coleção' },
+  { type: 'images', label: 'Imagens' },
+  { type: 'playlist', label: 'Playlist' },
   { type: 'divider', label: 'Divisor' },
   { type: 'blog', label: 'Blog' },
 ];
@@ -234,6 +240,37 @@ function BlockEditor({ block, index, onPatch }: { block: Block; index: number; o
 
     case 'collection':
       return <CollectionEditor block={block} onPatch={onPatch} />;
+
+    case 'playlist':
+      return (
+        <PlaylistPicker
+          id={`pl-${block.id}`}
+          value={block.playlistId}
+          onChange={(playlistId) => onPatch({ playlistId } as Partial<Block>)}
+        />
+      );
+
+    case 'images':
+      return (
+        <div className="stack">
+          <div className="field" style={{ maxWidth: 220 }}>
+            <label htmlFor={`il-${block.id}`}>Layout</label>
+            <select
+              id={`il-${block.id}`}
+              value={block.layout}
+              onChange={(e) => onPatch({ layout: e.target.value } as Partial<Block>)}
+            >
+              <option value="mosaico">Mosaico (moodboard)</option>
+              <option value="grade">Grade</option>
+            </select>
+          </div>
+          <ImagePicker
+            selected={block.mediaIds}
+            max={MAX_BLOCK_IMAGES}
+            onChange={(mediaIds) => onPatch({ mediaIds } as Partial<Block>)}
+          />
+        </div>
+      );
   }
 }
 
