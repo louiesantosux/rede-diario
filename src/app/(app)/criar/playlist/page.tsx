@@ -9,9 +9,9 @@ export const metadata: Metadata = { title: 'Nova playlist' };
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 const ERRORS: Record<string, string> = {
-  titulo: 'Dê um nome à playlist ou cole o link de uma playlist do YouTube.',
+  titulo: 'Dê um nome à playlist ou cole o link de uma playlist do YouTube ou do Spotify.',
   falhou: 'Não foi possível criar a playlist. Tente novamente.',
-  link: 'O link não é de uma playlist do YouTube ou do YouTube Music.',
+  link: 'O link não é de uma playlist do YouTube, do YouTube Music ou do Spotify.',
 };
 
 export default async function NovaPlaylistPage({ searchParams }: Props) {
@@ -33,11 +33,12 @@ export default async function NovaPlaylistPage({ searchParams }: Props) {
               name="importUrl"
               type="text"
               inputMode="url"
-              placeholder="https://music.youtube.com/playlist?list=…"
+              placeholder="music.youtube.com/playlist?list=… ou open.spotify.com/playlist/…"
               aria-describedby="import-help"
             />
             <small id="import-help">
-              Funciona com playlists públicas ou não listadas do YouTube e do YouTube Music (até 200 faixas).
+              YouTube e YouTube Music: as faixas entram uma a uma (até 200). Spotify: a playlist entra como um item
+              com capa, que toca no player do Spotify.
             </small>
           </div>
           <div className="field">
@@ -66,7 +67,7 @@ export default async function NovaPlaylistPage({ searchParams }: Props) {
             </select>
           </div>
           <p className="muted" style={{ margin: 0, fontSize: '0.875rem' }}>
-            Depois de criar, você pode adicionar mais músicas ou outras playlists colando links do YouTube.
+            Depois de criar, você pode adicionar mais músicas, álbuns ou playlists colando links do YouTube ou do Spotify.
           </p>
           <div className="row" style={{ justifyContent: 'flex-end' }}>
             <button type="submit" className="btn btn--primary">

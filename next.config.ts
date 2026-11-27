@@ -7,12 +7,12 @@ const isDev = process.env.NODE_ENV !== 'production';
 const supabase = 'https://*.supabase.co';
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval' " : ''}https://www.youtube.com https://s.ytimg.com`,
+  `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval' " : ''}https://www.youtube.com https://s.ytimg.com https://open.spotify.com https://open.spotifycdn.com`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${supabase} https://i.ytimg.com https://tile.openstreetmap.org`,
+  `img-src 'self' data: blob: ${supabase} https://i.ytimg.com https://i.scdn.co https://mosaic.scdn.co https://*.spotifycdn.com https://tile.openstreetmap.org`,
   "font-src 'self'",
   `connect-src 'self' ${supabase} wss://*.supabase.co https://www.youtube.com${isDev ? ' ws:' : ''}`,
-  'frame-src https://www.youtube-nocookie.com https://www.youtube.com',
+  'frame-src https://www.youtube-nocookie.com https://www.youtube.com https://open.spotify.com',
   "media-src 'self' blob:",
   "worker-src 'self' blob:",
   "object-src 'none'",

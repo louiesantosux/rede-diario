@@ -52,7 +52,11 @@ export function WikiBlocks({
 
           case 'collection':
             return (
-              <section key={block.id} className="collection" aria-label={block.title || 'Coleção'}>
+              <section
+                key={block.id}
+                className={block.layout === 'vitrine' ? 'collection collection--vitrine' : 'collection'}
+                aria-label={block.title || 'Coleção'}
+              >
                 {block.title && <h3 className="collection__title">{block.title}</h3>}
                 {block.items.length === 0 ? (
                   <p className="wiki-empty">Nenhum item ainda.</p>
@@ -63,14 +67,38 @@ export function WikiBlocks({
                     return (
                       <div key={status} className="collection__group">
                         <h4 className="collection__status">{status}</h4>
-                        <ul className="collection__grid">
-                          {items.map((it) => (
-                            <li key={it.id} className="collection__item">
-                              <span className="collection__name">{it.name}</span>
-                              {it.note && <span className="collection__note">{it.note}</span>}
-                            </li>
-                          ))}
-                        </ul>
+                        {block.layout === 'vitrine' ? (
+                          <ul className="wishlist">
+                            {items.map((it) => {
+                              const img = it.mediaId ? media[it.mediaId] : undefined;
+                              return (
+                                <li key={it.id} className="wish-card">
+                                  <span className="wish-card__img">
+                                    {img ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={img.url} alt={img.alt || it.name} loading="lazy" />
+                                    ) : (
+                                      <span aria-hidden="true">✦</span>
+                                    )}
+                                  </span>
+                                  <span className="wish-card__body">
+                                    <span className="wish-card__name">{it.name}</span>
+                                    {it.note && <span className="wish-card__note">{it.note}</span>}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : (
+                          <ul className="collection__grid">
+                            {items.map((it) => (
+                              <li key={it.id} className="collection__item">
+                                <span className="collection__name">{it.name}</span>
+                                {it.note && <span className="collection__note">{it.note}</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     );
                   })

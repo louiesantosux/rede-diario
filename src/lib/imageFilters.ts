@@ -15,6 +15,9 @@ export type Adjustments = {
   sepia: number; // 0..100
   vignette: number; // 0..100
   grain: number; // 0..100
+  split: number; // -100..100 tonalização dividida: + rosa/lilás, − âmbar/verde-água
+  glow: number; // 0..100 brilho difuso (bloom)
+  leak: number; // 0..100 luz vazada de filme, quente, vinda dos cantos
 };
 
 export const ZERO: Adjustments = {
@@ -31,6 +34,9 @@ export const ZERO: Adjustments = {
   sepia: 0,
   vignette: 0,
   grain: 0,
+  split: 0,
+  glow: 0,
+  leak: 0,
 };
 
 export const ADJUSTMENT_FIELDS: { key: keyof Adjustments; label: string; min: number; max: number }[] = [
@@ -46,13 +52,27 @@ export const ADJUSTMENT_FIELDS: { key: keyof Adjustments; label: string; min: nu
   { key: 'fade', label: 'Desbotar', min: 0, max: 100 },
   { key: 'vignette', label: 'Vinheta', min: 0, max: 100 },
   { key: 'grain', label: 'Granulação', min: 0, max: 100 },
+  { key: 'split', label: 'Tons divididos (âmbar ↔ rosa)', min: -100, max: 100 },
+  { key: 'glow', label: 'Brilho difuso', min: 0, max: 100 },
+  { key: 'leak', label: 'Luz vazada', min: 0, max: 100 },
 ];
 
-// Filtros próprios, inspirados na linguagem visual de apps como o Cymera.
+// Filtros próprios com a estética "Tumblr" dos apps de câmera como o Cymera:
+// cores lavadas, pretos levantados, tons pastel, granulação de filme e luz vazada.
+// Nenhum filtro mexe na geometria da foto.
 export const FILTERS: { id: string; label: string; adj: Partial<Adjustments> }[] = [
   { id: 'original', label: 'Original', adj: {} },
+  { id: 'sonho', label: 'Sonho', adj: { glow: 60, fade: 22, split: 35, saturation: -12, brightness: 8, contrast: -10 } },
+  { id: 'pastel', label: 'Pastel', adj: { fade: 40, saturation: -12, brightness: 18, split: 45, contrast: -22, glow: 15 } },
+  { id: 'indie', label: 'Indie', adj: { fade: 30, split: -45, saturation: -18, contrast: 8, grain: 22, vignette: 18 } },
+  { id: 'fim-de-tarde', label: 'Fim de tarde', adj: { leak: 80, temperature: 24, fade: 18, glow: 20, saturation: 6 } },
+  { id: 'filme-35', label: 'Filme 35mm', adj: { grain: 40, fade: 24, split: -20, contrast: 12, vignette: 26, saturation: -8 } },
+  { id: 'lavanda', label: 'Lavanda', adj: { tint: 14, temperature: -10, fade: 26, split: 30, saturation: -20, brightness: 6 } },
+  { id: 'cereja', label: 'Cereja', adj: { split: 60, tint: 8, contrast: 10, vibrance: 14, glow: 15 } },
+  { id: 'neblina', label: 'Neblina', adj: { fade: 48, glow: 35, contrast: -22, saturation: -24, brightness: 10 } },
+  { id: 'grunge', label: 'Grunge 2013', adj: { contrast: 34, saturation: -38, fade: 16, grain: 45, vignette: 40, split: -15 } },
+  { id: 'polaroide', label: 'Polaroide', adj: { fade: 28, temperature: 12, contrast: -12, saturation: -10, vignette: 22, leak: 18 } },
   { id: 'aurora', label: 'Aurora', adj: { temperature: 18, saturation: 10, fade: 12, contrast: -6, brightness: 4 } },
-  { id: 'polaroide', label: 'Polaroide', adj: { fade: 28, temperature: 12, contrast: -12, saturation: -10, vignette: 22 } },
   { id: 'lomo', label: 'Lomo', adj: { contrast: 32, saturation: 22, vignette: 50, shadows: -10 } },
   { id: 'algodao', label: 'Algodão', adj: { brightness: 12, saturation: -28, fade: 22, tint: 6, contrast: -10 } },
   { id: 'noite', label: 'Noite azul', adj: { temperature: -30, contrast: 12, shadows: 12, saturation: -8 } },
@@ -121,6 +141,7 @@ export function applyAdjustments(img: ImageData, a: Adjustments) {
   const sepia = a.sepia / 100;
   const vig = a.vignette / 100;
   const grain = a.grain / 100;
+  const split = a.split / 100;
   const cx = width / 2;
   const cy = height / 2;
   const maxD = Math.sqrt(cx * cx + cy * cy);
@@ -177,6 +198,25 @@ export function applyAdjustments(img: ImageData, a: Adjustments) {
         r += (sr - r) * sepia;
         g += (sg - g) * sepia;
         b += (sb - b) * sepia;
+      }
+
+      // Tons divididos: realces e sombras recebem cores opostas
+      if (split !== 0) {
+        const lt = clamp01(0.2126 * r + 0.7152 * g + 0.0722 * b);
+        const k = Math.abs(split) * 0.3;
+        const hiW = lt * lt;
+        const shW = (1 - lt) * (1 - lt);
+        if (split > 0) {
+          // realces rosados, sombras lilás
+          r += k * (hiW * 0.75 + shW * 0.3);
+          g -= k * (hiW * 0.25 + shW * 0.25);
+          b += k * (hiW * 0.3 + shW * 0.7);
+        } else {
+          // realces âmbar, sombras verde-água
+          r += k * (hiW * 0.7 - shW * 0.35);
+          g += k * (hiW * 0.35 + shW * 0.2);
+          b += k * (-hiW * 0.45 + shW * 0.45);
+        }
       }
 
       // Desbotar (levanta os pretos)
@@ -244,8 +284,53 @@ export function renderToCanvas(source: ImageBitmap, params: EditParams, maxSide:
     const img = ctx.getImageData(0, 0, w, h);
     applyAdjustments(img, adj);
     ctx.putImageData(img, 0, 0);
+    if (adj.glow > 0) applyGlow(canvas, ctx, adj.glow / 100);
+    if (adj.leak > 0) applyLeak(ctx, w, h, adj.leak / 100);
   }
   return canvas;
+}
+
+/**
+ * Brilho difuso: uma cópia desfocada (reduzida e ampliada, funciona em qualquer
+ * navegador) somada por "tela". Clareia e suaviza sem mover nenhum pixel de lugar.
+ */
+function applyGlow(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, amount: number) {
+  const w = canvas.width;
+  const h = canvas.height;
+  const small = document.createElement('canvas');
+  small.width = Math.max(1, Math.round(w / 14));
+  small.height = Math.max(1, Math.round(h / 14));
+  const sctx = small.getContext('2d')!;
+  sctx.imageSmoothingEnabled = true;
+  sctx.imageSmoothingQuality = 'high';
+  sctx.drawImage(canvas, 0, 0, small.width, small.height);
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = Math.min(1, amount) * 0.85;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(small, 0, 0, w, h);
+  ctx.restore();
+}
+
+/** Luz vazada: manchas quentes nos cantos, como em filme queimado. Determinística. */
+function applyLeak(ctx: CanvasRenderingContext2D, w: number, h: number, amount: number) {
+  const a = Math.min(1, amount);
+  const r = Math.max(w, h);
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  const g1 = ctx.createRadialGradient(0, h * 0.15, 0, 0, h * 0.15, r * 0.75);
+  g1.addColorStop(0, `rgba(255, 110, 30, ${a})`);
+  g1.addColorStop(0.45, `rgba(255, 60, 110, ${0.55 * a})`);
+  g1.addColorStop(1, 'rgba(255, 70, 90, 0)');
+  ctx.fillStyle = g1;
+  ctx.fillRect(0, 0, w, h);
+  const g2 = ctx.createRadialGradient(w, h, 0, w, h, r * 0.55);
+  g2.addColorStop(0, `rgba(255, 180, 80, ${0.7 * a})`);
+  g2.addColorStop(1, 'rgba(255, 190, 90, 0)');
+  ctx.fillStyle = g2;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
 }
 
 export function canvasToBlob(canvas: HTMLCanvasElement, quality = 0.88): Promise<Blob> {

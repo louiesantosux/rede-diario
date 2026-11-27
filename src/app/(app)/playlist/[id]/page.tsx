@@ -32,7 +32,7 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
 
   const { data: rows } = await supabase
     .from('playlist_tracks')
-    .select('id, youtube_id, title, author')
+    .select('id, youtube_id, title, author, source, spotify_kind, spotify_id, cover_url')
     .eq('playlist_id', id)
     .order('position', { ascending: true });
   const tracks = (rows ?? []) as Track[];
@@ -70,7 +70,11 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
                       <span className="track-row__num">{i + 1}.</span>
                       <span>
                         <strong>{t.title}</strong>
-                        {t.author && <span className="track-row__author">{t.author.replace(/ - Topic$/, '')}</span>}
+                        {t.source === 'spotify' ? (
+                          <span className="track-row__author">Spotify</span>
+                        ) : (
+                          t.author && <span className="track-row__author">{t.author.replace(/ - Topic$/, '')}</span>
+                        )}
                       </span>
                     </span>
                     <span className="track-row__actions">

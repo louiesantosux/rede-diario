@@ -4,7 +4,24 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Icon } from '@/components/Icon';
 import { thumbUrl } from '@/lib/youtube';
 
-export type Track = { id: string; youtube_id: string; title: string; author: string };
+export type Track = {
+  id: string;
+  youtube_id: string | null;
+  title: string;
+  author: string;
+  source?: 'youtube' | 'spotify' | string;
+  spotify_kind?: string | null;
+  spotify_id?: string | null;
+  cover_url?: string | null;
+};
+
+export const isSpotifyTrack = (t: Track | null | undefined) => Boolean(t && t.source === 'spotify' && t.spotify_id);
+
+/** Capa quadrada: a do Spotify, ou a miniatura do YouTube recortada no centro (via CSS). */
+export function trackCover(t: Track): string | null {
+  if (isSpotifyTrack(t)) return t.cover_url ?? null;
+  return t.youtube_id ? thumbUrl(t.youtube_id) : null;
+}
 
 // ---------- Tipos mínimos da YouTube IFrame API ----------
 type YTPlayer = {
@@ -32,12 +49,49 @@ type YTNamespace = {
     },
   ) => YTPlayer;
 };
+// ---------- Tipos mínimos da Spotify iFrame API ----------
+type SpotifyPlayback = { isPaused: boolean; isBuffering: boolean; duration: number; position: number; playingURI?: string };
+type SpotifyController = {
+  loadUri(uri: string): void;
+  play(): void;
+  pause(): void;
+  resume(): void;
+  togglePlay(): void;
+  seek(seconds: number): void;
+  destroy(): void;
+  addListener(event: string, cb: (e: { data: SpotifyPlayback }) => void): void;
+};
+type SpotifyIFrameAPI = {
+  createController(
+    el: HTMLElement,
+    opts: { uri: string; width?: string | number; height?: string | number },
+    cb: (controller: SpotifyController) => void,
+  ): void;
+};
+
 declare global {
   interface Window {
     YT?: YTNamespace;
     onYouTubeIframeAPIReady?: () => void;
+    onSpotifyIframeApiReady?: (api: SpotifyIFrameAPI) => void;
   }
 }
+
+let spotifyApiPromise: Promise<SpotifyIFrameAPI> | null = null;
+function loadSpotifyApi(): Promise<SpotifyIFrameAPI> {
+  if (typeof window === 'undefined') return Promise.reject();
+  if (spotifyApiPromise) return spotifyApiPromise;
+  spotifyApiPromise = new Promise<SpotifyIFrameAPI>((resolve) => {
+    window.onSpotifyIframeApiReady = (api) => resolve(api);
+    const script = document.createElement('script');
+    script.src = 'https://open.spotify.com/embed/iframe-api/v1';
+    script.async = true;
+    document.head.appendChild(script);
+  });
+  return spotifyApiPromise;
+}
+
+const spotifyHeight = (t: Track) => (t.spotify_kind === 'track' ? 80 : 152);
 
 let apiPromise: Promise<void> | null = null;
 function loadYouTubeApi(): Promise<void> {
@@ -120,13 +174,17 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
   const current = queue[index] ?? null;
 
-  const goTo = useCallback((i: number) => {
-    const list = queueRef.current;
-    if (i < 0 || i >= list.length) return;
-    setIndex(i);
-    setNotice(null);
-    setStatus('loading');
-    player.current?.loadVideoById(list[i].youtube_id);
+  const spotifyHolder = useRef<HTMLDivElement>(null);
+  const spotify = useRef<SpotifyController | null>(null);
+  const spotifyEnded = useRef(false);
+  const goToRef = useRef<(i: number) => void>(() => {});
+
+  /** Próxima faixa da fila (ou volta ao início, se estiver em repetição). */
+  const advance = useCallback(() => {
+    const next = indexRef.current + 1;
+    if (next < queueRef.current.length) goToRef.current(next);
+    else if (loopRef.current) goToRef.current(0);
+    else setStatus('paused');
   }, []);
 
   const ensurePlayer = useCallback(
@@ -153,28 +211,100 @@ export function MusicProvider({ children }: { children: ReactNode }) {
             e.target.playVideo();
           },
           onStateChange: (e) => {
+            if (isSpotifyTrack(queueRef.current[indexRef.current])) return;
             if (e.data === 1) {
               setStatus('playing');
               e.target.setVolume(Math.min(volumeRef.current, maxVolumeRef.current));
             } else if (e.data === 2) setStatus('paused');
-            else if (e.data === 0) {
-              const next = indexRef.current + 1;
-              if (next < queueRef.current.length) goTo(next);
-              else if (loopRef.current) goTo(0);
-              else setStatus('paused');
-            }
+            else if (e.data === 0) advance();
           },
           onError: () => {
+            if (isSpotifyTrack(queueRef.current[indexRef.current])) return;
             setNotice('Este vídeo não pode ser reproduzido aqui. Pulando para a próxima.');
             const next = indexRef.current + 1;
-            if (next < queueRef.current.length) goTo(next);
+            if (next < queueRef.current.length) goToRef.current(next);
             else setStatus('paused');
           },
         },
       });
     },
-    [goTo],
+    [advance],
   );
+
+  /**
+   * Spotify só permite tocar no player oficial dele, visível. Ele toca a faixa
+   * inteira para quem está conectado ao Spotify no navegador e 30 s para os demais.
+   */
+  const ensureSpotify = useCallback(
+    async (t: Track) => {
+      const uri = `spotify:${t.spotify_kind}:${t.spotify_id}`;
+      const height = spotifyHeight(t);
+      spotifyEnded.current = false;
+      const api = await loadSpotifyApi();
+      if (spotify.current) {
+        const frame = spotifyHolder.current?.querySelector('iframe');
+        if (frame) frame.style.height = `${height}px`;
+        spotify.current.loadUri(uri);
+        spotify.current.play();
+        return;
+      }
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      if (!spotifyHolder.current) return;
+      const mount = document.createElement('div');
+      spotifyHolder.current.replaceChildren(mount);
+      api.createController(mount, { uri, width: '100%', height }, (controller) => {
+        spotify.current = controller;
+        controller.addListener('ready', () => controller.play());
+        controller.addListener('playback_update', (e) => {
+          const cur = queueRef.current[indexRef.current];
+          if (!isSpotifyTrack(cur)) return;
+          const d = e.data;
+          setTime({ current: d.position / 1000, duration: d.duration / 1000 });
+          setStatus(d.isBuffering ? 'loading' : d.isPaused ? 'paused' : 'playing');
+          // Fim de uma faixa avulsa: segue para a próxima da fila.
+          if (
+            cur?.spotify_kind === 'track' &&
+            d.isPaused &&
+            d.duration > 0 &&
+            d.position >= d.duration - 1000 &&
+            !spotifyEnded.current
+          ) {
+            spotifyEnded.current = true;
+            advance();
+          }
+        });
+      });
+    },
+    [advance],
+  );
+
+  const startTrack = useCallback(
+    (t: Track) => {
+      setTime({ current: 0, duration: 0 });
+      if (isSpotifyTrack(t)) {
+        player.current?.pauseVideo();
+        void ensureSpotify(t);
+      } else if (t.youtube_id) {
+        spotify.current?.pause();
+        void ensurePlayer(t.youtube_id);
+      }
+    },
+    [ensurePlayer, ensureSpotify],
+  );
+
+  const goTo = useCallback(
+    (i: number) => {
+      const list = queueRef.current;
+      if (i < 0 || i >= list.length) return;
+      setIndex(i);
+      indexRef.current = i;
+      setNotice(null);
+      setStatus('loading');
+      startTrack(list[i]);
+    },
+    [startTrack],
+  );
+  goToRef.current = goTo;
 
   const playQueue = useCallback(
     (tracks: Track[], start: number, playlistTitle: string, options: PlayOptions = {}) => {
@@ -196,12 +326,18 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       setMinimized(false);
       setNotice(null);
       setStatus('loading');
-      void ensurePlayer(tracks[i].youtube_id);
+      startTrack(tracks[i]);
     },
-    [ensurePlayer],
+    [startTrack],
   );
 
+  const onSpotify = isSpotifyTrack(current);
+
   const toggle = () => {
+    if (onSpotify) {
+      spotify.current?.togglePlay();
+      return;
+    }
     if (!player.current) return;
     if (status === 'playing') player.current.pauseVideo();
     else player.current.playVideo();
@@ -214,35 +350,45 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     player.current?.destroy();
     player.current = null;
     holder.current?.replaceChildren();
+    spotify.current?.destroy();
+    spotify.current = null;
+    spotifyHolder.current?.replaceChildren();
     setQueue([]);
     setStatus('idle');
     setMinimized(false);
   };
 
-  useEffect(() => () => player.current?.destroy(), []);
+  useEffect(
+    () => () => {
+      player.current?.destroy();
+      spotify.current?.destroy();
+    },
+    [],
+  );
 
   // Mantém o volume dentro do teto, mesmo se alguém mexer no controle do próprio YouTube.
   useEffect(() => {
-    if (maxVolume >= 100 || status !== 'playing') return;
+    if (maxVolume >= 100 || status !== 'playing' || onSpotify) return;
     const timer = setInterval(() => {
       const p = player.current;
       if (p && p.getVolume() > maxVolumeRef.current) p.setVolume(maxVolumeRef.current);
     }, 500);
     return () => clearInterval(timer);
-  }, [maxVolume, status]);
+  }, [maxVolume, status, onSpotify]);
 
   // Atualiza a barra de progresso enquanto toca.
   useEffect(() => {
-    if (status !== 'playing') return;
+    if (status !== 'playing' || onSpotify) return;
     const timer = setInterval(() => {
       const p = player.current;
       if (p) setTime({ current: p.getCurrentTime(), duration: p.getDuration() });
     }, 500);
     return () => clearInterval(timer);
-  }, [status]);
+  }, [status, onSpotify]);
 
   const seek = (seconds: number) => {
-    player.current?.seekTo(seconds, true);
+    if (onSpotify) spotify.current?.seek(Math.round(seconds));
+    else player.current?.seekTo(seconds, true);
     setTime((t) => ({ ...t, current: seconds }));
   };
 
@@ -268,9 +414,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         aria-hidden={!active}
       >
         <div className="miniplayer__bar">
-          {current && (
+          {current && trackCover(current) && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={thumbUrl(current.youtube_id)} alt="" width={48} height={27} className="miniplayer__thumb" />
+            <img src={trackCover(current)!} alt="" width={44} height={44} className="miniplayer__thumb" />
           )}
           <div className="miniplayer__info">
             <span className="miniplayer__title">{current?.title ?? ''}</span>
@@ -348,7 +494,12 @@ export function MusicProvider({ children }: { children: ReactNode }) {
             <output>{formatTime(time.duration)}</output>
           </div>
         )}
-        {!minimized && (
+        {!minimized && onSpotify && (
+          <p className="miniplayer__hint">
+            Tocando pelo Spotify: o volume segue o do dispositivo. Sem login no Spotify, toca uma prévia de 30 segundos.
+          </p>
+        )}
+        {!minimized && !onSpotify && (
           <div className="miniplayer__volume">
             <label htmlFor="mini-volume">Volume</label>
             <input
@@ -367,6 +518,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           </div>
         )}
         <div className={SHOW_VIDEO ? 'miniplayer__screen' : 'miniplayer__screen miniplayer__screen--hidden'} ref={holder} />
+        <div className={onSpotify ? 'miniplayer__spotify' : 'miniplayer__spotify miniplayer__spotify--hidden'} ref={spotifyHolder} />
         {notice && (
           <p className="miniplayer__notice" role="status">
             {notice}

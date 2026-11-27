@@ -79,7 +79,7 @@ export default async function WikiPage({ params, searchParams }: Props) {
       supabase.from('playlists').select('id, title').in('id', playlistIds),
       supabase
         .from('playlist_tracks')
-        .select('id, playlist_id, youtube_id, title, author')
+        .select('id, playlist_id, youtube_id, title, author, source, spotify_kind, spotify_id, cover_url')
         .in('playlist_id', playlistIds)
         .order('position', { ascending: true }),
     ]);

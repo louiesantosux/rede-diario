@@ -2,11 +2,21 @@ import { docMediaIds, sanitizeDoc, type RTDoc } from './richtext';
 
 // Blocos de uma página de wiki. Salvos como JSON e validados no servidor.
 
-export type CollectionItem = { id: string; name: string; status: string; note: string };
+export type CollectionItem = { id: string; name: string; status: string; note: string; mediaId: string | null };
+
+/** lista: tabela simples. vitrine: cartões com imagem, nome e texto curto (mini wishlist). */
+export type CollectionLayout = 'lista' | 'vitrine';
 
 export type Block =
   | { id: string; type: 'text'; doc: RTDoc }
-  | { id: string; type: 'collection'; title: string; statuses: string[]; items: CollectionItem[] }
+  | {
+      id: string;
+      type: 'collection';
+      title: string;
+      statuses: string[];
+      items: CollectionItem[];
+      layout: CollectionLayout;
+    }
   | { id: string; type: 'divider'; style: 'linha' | 'estrelas' | 'pontos' }
   | { id: string; type: 'blog' }
   | { id: string; type: 'images'; mediaIds: string[]; layout: 'grade' | 'mosaico' }
@@ -15,6 +25,7 @@ export type Block =
 export const MAX_BLOCKS = 60;
 export const MAX_ITEMS = 300;
 export const DEFAULT_STATUSES = ['Tenho', 'Quero', 'Já tive'];
+export const WISHLIST_STATUSES = ['Quero', 'Ganhei', 'Comprei'];
 
 export const newId = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 
@@ -33,7 +44,14 @@ export function newBlock(type: Block['type']): Block {
     case 'text':
       return { id: newId(), type: 'text', doc: emptyDoc() };
     case 'collection':
-      return { id: newId(), type: 'collection', title: 'Minha coleção', statuses: [...DEFAULT_STATUSES], items: [] };
+      return {
+        id: newId(),
+        type: 'collection',
+        title: 'Minha coleção',
+        statuses: [...DEFAULT_STATUSES],
+        items: [],
+        layout: 'lista',
+      };
     case 'divider':
       return { id: newId(), type: 'divider', style: 'estrelas' };
     case 'blog':
@@ -52,7 +70,17 @@ export function blockPlaylistIds(blocks: Block[]): string[] {
 /** Todas as imagens usadas numa página (para a tabela page_media). */
 export function blockMediaIds(blocks: Block[]): string[] {
   return Array.from(
-    new Set(blocks.flatMap((b) => (b.type === 'images' ? b.mediaIds : b.type === 'text' ? docMediaIds(b.doc) : []))),
+    new Set(
+      blocks.flatMap((b) =>
+        b.type === 'images'
+          ? b.mediaIds
+          : b.type === 'text'
+            ? docMediaIds(b.doc)
+            : b.type === 'collection'
+              ? b.items.flatMap((it) => (it.mediaId ? [it.mediaId] : []))
+              : [],
+      ),
+    ),
   );
 }
 
@@ -82,9 +110,17 @@ export function sanitizeBlocks(raw: unknown): Block[] {
             name: str(it.name, 120),
             status: safeStatuses.includes(str(it.status, 30)) ? str(it.status, 30) : safeStatuses[0],
             note: str(it.note, 500),
+            mediaId: typeof it.mediaId === 'string' && UUID_RE.test(it.mediaId) ? it.mediaId : null,
           }))
           .filter((it) => it.name);
-        out.push({ id, type: 'collection', title: str(b.title, 80), statuses: safeStatuses, items });
+        out.push({
+          id,
+          type: 'collection',
+          title: str(b.title, 80),
+          statuses: safeStatuses,
+          items,
+          layout: b.layout === 'vitrine' ? 'vitrine' : 'lista',
+        });
         break;
       }
       case 'divider': {
@@ -115,11 +151,12 @@ export function sanitizeBlocks(raw: unknown): Block[] {
 }
 
 // Modelos iniciais de wiki (RF-11)
-export type TemplateId = 'branco' | 'colecao' | 'blog' | 'diario' | 'colecao-blog';
+export type TemplateId = 'branco' | 'colecao' | 'wishlist' | 'blog' | 'diario' | 'colecao-blog';
 
 export const TEMPLATES: { id: TemplateId; label: string; hint: string }[] = [
   { id: 'colecao-blog', label: 'Coleção + blog', hint: 'Lista do que você tem e quer, e um blog sobre o assunto.' },
   { id: 'colecao', label: 'Coleção', hint: 'Itens com status: tenho, quero, já tive.' },
+  { id: 'wishlist', label: 'Mini wishlist', hint: 'Vitrine com foto, nome e um texto curto de cada desejo.' },
   { id: 'blog', label: 'Blog', hint: 'Reúne os posts que você vincular a esta wiki.' },
   { id: 'diario', label: 'Diário', hint: 'Uma página para escrever livremente.' },
   { id: 'branco', label: 'Em branco', hint: 'Comece do zero.' },
@@ -132,6 +169,13 @@ export function templatePages(template: TemplateId): { title: string; blocks: Bl
   switch (template) {
     case 'colecao':
       return [{ title: 'Coleção', blocks: [collection()] }];
+    case 'wishlist':
+      return [
+        {
+          title: 'Wishlist',
+          blocks: [{ ...collection(), title: 'Meus desejos', statuses: [...WISHLIST_STATUSES], layout: 'vitrine' } as Block],
+        },
+      ];
     case 'blog':
       return [{ title: 'Blog', blocks: [{ id: newId(), type: 'text', doc: textDoc('Posts vinculados a esta wiki aparecem aqui.') }, newBlock('blog')] }];
     case 'diario':

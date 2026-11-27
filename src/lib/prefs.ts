@@ -1,3 +1,5 @@
+import { UI_PREFS_KEY, applyUiPrefs, reapplyStoredUi } from './uiPrefs';
+
 export type ThemeId = 'auto' | 'aero-claro' | 'aero-escuro' | 'papel' | 'alto-contraste';
 
 export type A11yPrefs = {
@@ -41,6 +43,8 @@ export function applyPrefs(prefs: A11yPrefs) {
   root.dataset.reduceMotion = String(prefs.reduceMotion || systemReduce);
   root.dataset.reduceTransparency = String(prefs.reduceTransparency);
   root.dataset.readingMode = String(prefs.readingMode);
+  // A aparência escolhida no Meu espaço depende do tema base (ex.: alto contraste a ignora).
+  reapplyStoredUi();
 }
 
 // Script executado antes da pintura para evitar "flash" de tema errado.
@@ -57,4 +61,5 @@ r.dataset.lineSpacing=p.lineSpacing;r.dataset.font=p.font;
 r.dataset.reduceMotion=String(p.reduceMotion||rm);
 r.dataset.reduceTransparency=String(p.reduceTransparency);
 r.dataset.readingMode=String(p.readingMode);
+(${applyUiPrefs.toString()})(JSON.parse(localStorage.getItem('${UI_PREFS_KEY}')||'{}'));
 }catch(e){}})();`;

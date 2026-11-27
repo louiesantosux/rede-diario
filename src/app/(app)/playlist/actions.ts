@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { parsePlaylistId, parseYouTubeId } from '@/lib/youtube';
 import { fetchYouTubePlaylist } from '@/lib/youtubeImport';
+import { fetchSpotifyItem, looksLikeSpotify } from '@/lib/spotifyImport';
+import { SPOTIFY_KIND_LABEL } from '@/lib/spotify';
 
 const MAX_TRACKS = 200;
 
@@ -25,7 +27,12 @@ export async function createPlaylist(form: FormData) {
 
   // Importação opcional de uma playlist pronta do YouTube / YouTube Music.
   let imported: Awaited<ReturnType<typeof fetchYouTubePlaylist>> | null = null;
-  if (importUrl) {
+  let spotify: Awaited<ReturnType<typeof fetchSpotifyItem>> | null = null;
+  if (importUrl && looksLikeSpotify(importUrl)) {
+    spotify = await fetchSpotifyItem(importUrl);
+    if (!spotify.ok) redirect(`/criar/playlist?erro=importacao&detalhe=${encodeURIComponent(spotify.error)}`);
+    if (!title) title = spotify.title;
+  } else if (importUrl) {
     const listId = parsePlaylistId(importUrl);
     if (!listId) redirect('/criar/playlist?erro=link');
     imported = await fetchYouTubePlaylist(listId, MAX_TRACKS);
@@ -49,6 +56,12 @@ export async function createPlaylist(form: FormData) {
     redirect('/criar/playlist?erro=falhou');
   }
 
+  if (spotify?.ok) {
+    const { error: spError } = await supabase.from('playlist_tracks').insert(spotifyRow(spotify, data.id, 0));
+    if (spError) console.error('[createPlaylist/spotify]', spError.code, spError.message);
+    redirect(`/playlist/${data.id}`);
+  }
+
   if (imported?.ok && imported.tracks.length) {
     const { error: tracksError } = await supabase
       .from('playlist_tracks')
@@ -59,17 +72,61 @@ export async function createPlaylist(form: FormData) {
   redirect(`/playlist/${data.id}`);
 }
 
-/** Adiciona uma faixa a partir de um link. O título vem do oEmbed público do YouTube. */
+function spotifyRow(item: Extract<Awaited<ReturnType<typeof fetchSpotifyItem>>, { ok: true }>, playlistId: string, position: number) {
+  return {
+    playlist_id: playlistId,
+    source: 'spotify',
+    youtube_id: null,
+    spotify_kind: item.ref.kind,
+    spotify_id: item.ref.id,
+    cover_url: item.cover,
+    title: item.title,
+    author: '',
+    position,
+  };
+}
+
+async function nextPosition(playlistId: string) {
+  const supabase = await createClient();
+  const { data: last } = await supabase
+    .from('playlist_tracks')
+    .select('position')
+    .eq('playlist_id', playlistId)
+    .order('position', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (last?.position ?? -1) + 1;
+}
+
+/** Adiciona uma faixa a partir de um link do YouTube ou do Spotify. */
 export async function addTrack(_prev: TrackState, form: FormData): Promise<TrackState> {
   const playlistId = uuid(form, 'playlistId');
   if (!playlistId) return { error: 'Playlist inválida.' };
   const input = str(form, 'url', 500);
+
+  // Spotify: faixa, álbum ou playlist entram como um item com capa e tocam no player do Spotify.
+  if (looksLikeSpotify(input)) {
+    const item = await fetchSpotifyItem(input);
+    if (!item.ok) return { error: item.error };
+    const supabase = await createClient();
+    const { error } = await supabase.from('playlist_tracks').insert(spotifyRow(item, playlistId, await nextPosition(playlistId)));
+    if (error) {
+      console.error('[addTrack/spotify]', error.code, error.message);
+      return { error: error.message.includes('limite') ? 'A playlist atingiu o limite de 200 faixas.' : 'Não foi possível adicionar.' };
+    }
+    revalidatePath(`/playlist/${playlistId}`);
+    const kind = item.ref.kind === 'track' ? '' : ` (${SPOTIFY_KIND_LABEL[item.ref.kind].toLowerCase()})`;
+    return { ok: `“${item.title}”${kind} adicionada.` };
+  }
+
   const videoId = parseYouTubeId(input);
 
   // Link de playlist (sem vídeo específico): importa todas as faixas.
   if (!videoId) {
     const listId = parsePlaylistId(input);
-    if (!listId) return { error: 'Cole um link do YouTube válido: de uma música (watch?v=…) ou de uma playlist (playlist?list=…).' };
+    if (!listId) {
+      return { error: 'Cole um link válido: música ou playlist do YouTube, ou música, álbum ou playlist do Spotify.' };
+    }
     return importIntoPlaylist(playlistId, listId);
   }
 
@@ -93,20 +150,12 @@ export async function addTrack(_prev: TrackState, form: FormData): Promise<Track
   }
 
   const supabase = await createClient();
-  const { data: last } = await supabase
-    .from('playlist_tracks')
-    .select('position')
-    .eq('playlist_id', playlistId)
-    .order('position', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
   const { error } = await supabase.from('playlist_tracks').insert({
     playlist_id: playlistId,
     youtube_id: videoId,
     title: title || 'Vídeo do YouTube',
     author,
-    position: (last?.position ?? -1) + 1,
+    position: await nextPosition(playlistId),
   });
   if (error) {
     console.error('[addTrack]', error.code, error.message);

@@ -10,6 +10,7 @@ import { WikiCardList } from '@/components/wiki/WikiCardList';
 import { MediaGallery } from '@/components/MediaGallery';
 import { getMediaViews, orderedViews } from '@/lib/media';
 import { NotesList, type Note } from '@/components/space/Mural';
+import { SiteAppearance } from '@/components/space/SiteAppearance';
 
 export const metadata: Metadata = { title: 'Meu espaço' };
 
@@ -37,7 +38,7 @@ export default async function MeuEspacoPage({ searchParams }: Props) {
     { data: space },
     { data: notes },
   ] = await Promise.all([
-    supabase.from('profiles').select('username, display_name, mood').eq('id', userId).single(),
+    supabase.from('profiles').select('username, display_name, mood, theme, a11y_prefs').eq('id', userId).single(),
     supabase
       .from('wikis')
       .select('id, title, description, visibility, theme')
@@ -106,6 +107,10 @@ export default async function MeuEspacoPage({ searchParams }: Props) {
           <NotesList notes={pending} isOwner empty="" />
         </Window>
       )}
+
+      <Window title="Aparência do site" icon="star">
+        <SiteAppearance userId={userId} savedUi={profile?.theme ?? null} savedA11y={profile?.a11y_prefs ?? null} />
+      </Window>
 
       <Window title="Minhas wikis" icon="book">
         {wikis && wikis.length > 0 ? (

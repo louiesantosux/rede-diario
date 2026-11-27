@@ -1,7 +1,6 @@
 'use client';
 
-import { useMusic, type Track } from '@/components/music/MusicProvider';
-import { thumbUrl } from '@/lib/youtube';
+import { isSpotifyTrack, trackCover, useMusic, type Track } from '@/components/music/MusicProvider';
 
 export type { Track };
 
@@ -37,11 +36,20 @@ export function PlaylistPlayer({ tracks, title }: { tracks: Track[]; title: stri
                 aria-label={`Tocar ${t.title}`}
                 onClick={() => music.playQueue(tracks, i, title)}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={thumbUrl(t.youtube_id)} alt="" width={64} height={36} loading="lazy" />
+                <span className="tracklist__cover" aria-hidden="true">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {trackCover(t) ? <img src={trackCover(t)!} alt="" width={56} height={56} loading="lazy" /> : <span>♪</span>}
+                </span>
                 <span className="tracklist__text">
                   <span className="tracklist__title">{t.title}</span>
-                  {t.author && <span className="tracklist__author">{t.author.replace(/ - Topic$/, '')}</span>}
+                  {isSpotifyTrack(t) ? (
+                    <span className="tracklist__author">
+                      <span className="tracklist__badge">Spotify</span>
+                      {t.spotify_kind === 'album' ? ' álbum' : t.spotify_kind === 'playlist' ? ' playlist completa' : ''}
+                    </span>
+                  ) : (
+                    t.author && <span className="tracklist__author">{t.author.replace(/ - Topic$/, '')}</span>
+                  )}
                 </span>
                 {playing && <span className="tracklist__now">{music.status === 'playing' ? 'Tocando' : 'Pausada'}</span>}
               </button>

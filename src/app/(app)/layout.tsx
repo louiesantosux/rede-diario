@@ -11,11 +11,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { data } = await supabase.auth.getUser();
   if (!data.user) redirect('/entrar');
 
-  const { data: profile } = await supabase.from('profiles').select('a11y_prefs').eq('id', data.user.id).single();
+  const { data: profile } = await supabase.from('profiles').select('a11y_prefs, theme').eq('id', data.user.id).single();
 
   return (
     <MusicProvider>
-      <PrefsSync saved={(profile?.a11y_prefs ?? null) as Partial<A11yPrefs> | null} />
+      <PrefsSync saved={(profile?.a11y_prefs ?? null) as Partial<A11yPrefs> | null} ui={profile?.theme ?? null} />
       {children}
       <Taskbar />
     </MusicProvider>

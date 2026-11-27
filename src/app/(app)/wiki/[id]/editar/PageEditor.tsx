@@ -9,6 +9,8 @@ import { RichEditor } from '@/components/editor/RichEditor';
 import { ImagePicker } from '@/components/wiki/ImagePicker';
 import { PlaylistPicker } from '@/components/wiki/PlaylistPicker';
 import { MAX_BLOCK_IMAGES, newBlock, newId, type Block, type CollectionItem } from '@/lib/blocks';
+import { createClient } from '@/lib/supabase/client';
+import { signedUrls } from '@/lib/mediaClient';
 import { deletePage, savePage, type FormState } from '../../actions';
 
 type Visibility = 'private' | 'friends' | 'unlisted' | 'public';
@@ -321,15 +323,37 @@ function CollectionEditor({
   onPatch: (c: Partial<Block>) => void;
 }) {
   const [statusText, setStatusText] = useState(block.statuses.join(', '));
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [picking, setPicking] = useState<string | null>(null);
+  const vitrine = block.layout === 'vitrine';
 
   const setItems = (items: CollectionItem[]) => onPatch({ items } as Partial<Block>);
   const updateItem = (id: string, changes: Partial<CollectionItem>) =>
     setItems(block.items.map((it) => (it.id === id ? { ...it, ...changes } : it)));
 
+  // Miniaturas das imagens já escolhidas (URLs temporárias).
+  const imageKey = block.items.map((it) => it.mediaId ?? '').join(',');
+  useEffect(() => {
+    const ids = imageKey.split(',').filter((id) => id && !urls[id]);
+    if (!vitrine || ids.length === 0) return;
+    let alive = true;
+    void signedUrls(createClient(), ids).then((found) => {
+      if (alive) setUrls((u) => ({ ...u, ...found }));
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageKey, vitrine]);
+
+  const addItem = () =>
+    setItems([...block.items, { id: newId(), name: '', status: block.statuses[0], note: '', mediaId: null }]);
+  const removeItem = (id: string) => setItems(block.items.filter((x) => x.id !== id));
+
   return (
     <div className="stack">
       <div className="row" style={{ alignItems: 'flex-end' }}>
-        <div className="field" style={{ flex: '1 1 220px' }}>
+        <div className="field" style={{ flex: '1 1 200px' }}>
           <label htmlFor={`ct-${block.id}`}>Nome da coleção</label>
           <input
             id={`ct-${block.id}`}
@@ -339,7 +363,18 @@ function CollectionEditor({
             onChange={(e) => onPatch({ title: e.target.value } as Partial<Block>)}
           />
         </div>
-        <div className="field" style={{ flex: '1 1 260px' }}>
+        <div className="field" style={{ flex: '0 1 230px' }}>
+          <label htmlFor={`cl-${block.id}`}>Formato</label>
+          <select
+            id={`cl-${block.id}`}
+            value={block.layout}
+            onChange={(e) => onPatch({ layout: e.target.value } as Partial<Block>)}
+          >
+            <option value="lista">Lista simples</option>
+            <option value="vitrine">Vitrine (mini wishlist com foto)</option>
+          </select>
+        </div>
+        <div className="field" style={{ flex: '1 1 240px' }}>
           <label htmlFor={`cs-${block.id}`}>Status (separados por vírgula)</label>
           <input
             id={`cs-${block.id}`}
@@ -359,7 +394,94 @@ function CollectionEditor({
         </div>
       </div>
 
-      {block.items.length > 0 && (
+      {vitrine && block.items.length > 0 && (
+        <ul className="wish-edit">
+          {block.items.map((it, i) => (
+            <li key={it.id} className="wish-edit__item">
+              <div className="wish-edit__media">
+                <span className="wish-card__img" aria-hidden="true">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {it.mediaId && urls[it.mediaId] ? <img src={urls[it.mediaId]} alt="" /> : <span>✦</span>}
+                </span>
+                <div className="row" style={{ gap: 4 }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    aria-expanded={picking === it.id}
+                    onClick={() => setPicking(picking === it.id ? null : it.id)}
+                  >
+                    {it.mediaId ? 'Trocar imagem' : 'Escolher imagem'}
+                    <span className="sr-only"> do item {i + 1}</span>
+                  </button>
+                  {it.mediaId && (
+                    <button type="button" className="btn btn--ghost" onClick={() => updateItem(it.id, { mediaId: null })}>
+                      Tirar<span className="sr-only"> imagem do item {i + 1}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="stack" style={{ gap: 8 }}>
+                <div className="row" style={{ alignItems: 'flex-end' }}>
+                  <div className="field" style={{ flex: '1 1 200px' }}>
+                    <label htmlFor={`wn-${it.id}`}>Nome do item</label>
+                    <input
+                      id={`wn-${it.id}`}
+                      type="text"
+                      maxLength={120}
+                      value={it.name}
+                      onChange={(e) => updateItem(it.id, { name: e.target.value })}
+                    />
+                  </div>
+                  <div className="field" style={{ flex: '0 1 160px' }}>
+                    <label htmlFor={`ws-${it.id}`}>Status</label>
+                    <select id={`ws-${it.id}`} value={it.status} onChange={(e) => updateItem(it.id, { status: e.target.value })}>
+                      {block.statuses.map((st) => (
+                        <option key={st} value={st}>
+                          {st}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    className="toolbar__btn"
+                    aria-label={`Remover item ${i + 1}`}
+                    onClick={() => removeItem(it.id)}
+                  >
+                    <Icon name="trash" />
+                  </button>
+                </div>
+                <div className="field">
+                  <label htmlFor={`wt-${it.id}`}>Sobre o item</label>
+                  <textarea
+                    id={`wt-${it.id}`}
+                    rows={2}
+                    maxLength={500}
+                    value={it.note}
+                    placeholder="Por que você quer, onde viu, tamanho, cor…"
+                    onChange={(e) => updateItem(it.id, { note: e.target.value })}
+                  />
+                </div>
+              </div>
+              {picking === it.id && (
+                <div className="wish-edit__picker">
+                  <ImagePicker
+                    selected={[]}
+                    max={1}
+                    onChange={(ids) => {
+                      const id = ids[ids.length - 1] ?? null;
+                      updateItem(it.id, { mediaId: id });
+                      setPicking(null);
+                    }}
+                  />
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!vitrine && block.items.length > 0 && (
         <table className="items-table">
           <thead>
             <tr>
@@ -389,9 +511,9 @@ function CollectionEditor({
                     value={it.status}
                     onChange={(e) => updateItem(it.id, { status: e.target.value })}
                   >
-                    {block.statuses.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
+                    {block.statuses.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
                       </option>
                     ))}
                   </select>
@@ -410,7 +532,7 @@ function CollectionEditor({
                     type="button"
                     className="toolbar__btn"
                     aria-label={`Remover item ${i + 1}`}
-                    onClick={() => setItems(block.items.filter((x) => x.id !== it.id))}
+                    onClick={() => removeItem(it.id)}
                   >
                     ✕
                   </button>
@@ -422,17 +544,13 @@ function CollectionEditor({
       )}
 
       <div>
-        <button
-          type="button"
-          className="btn"
-          onClick={() => setItems([...block.items, { id: newId(), name: '', status: block.statuses[0], note: '' }])}
-        >
+        <button type="button" className="btn" onClick={addItem}>
           <Icon name="plus" className="btn__icon" />
           Adicionar item
         </button>
       </div>
       <p className="muted" style={{ margin: 0, fontSize: '0.8125rem' }}>
-        Itens sem nome não são salvos.
+        Itens sem nome não são salvos.{vitrine ? ' As imagens vêm da sua galeria e seguem a visibilidade desta página.' : ''}
       </p>
     </div>
   );
