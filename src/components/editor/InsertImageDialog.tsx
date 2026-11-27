@@ -93,7 +93,13 @@ export function InsertImageDialog({
         <div className="window__titlebar">
           <h2 id="insert-image-title">Inserir imagem</h2>
         </div>
-        <div className="window__body stack">
+        <div
+          className="window__body stack"
+          onKeyDown={(e) => {
+            // Evita que Enter envie o formulário do post/página por trás do diálogo.
+            if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') e.preventDefault();
+          }}
+        >
           <div className="row" role="tablist" aria-label="Origem da imagem">
             <button type="button" role="tab" aria-selected={tab === 'galeria'} className="btn" onClick={() => setTab('galeria')}>
               Da galeria

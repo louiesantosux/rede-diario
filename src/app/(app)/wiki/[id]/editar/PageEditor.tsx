@@ -17,8 +17,7 @@ type Props = {
   wikiId: string;
   wikiTitle: string;
   page: { id: string; title: string; visibility: Visibility; blocks: Block[] };
-  canDelete: boolean;
-  lastPageError: boolean;
+  bgMusic: { youtubeId: string; title: string } | null;
 };
 
 const BLOCK_LABEL: Record<Block['type'], string> = {
@@ -39,12 +38,13 @@ const ADDABLE: { type: Block['type']; label: string }[] = [
   { type: 'blog', label: 'Blog' },
 ];
 
-export function PageEditor({ wikiId, wikiTitle, page, canDelete, lastPageError }: Props) {
+export function PageEditor({ wikiId, wikiTitle, page, bgMusic }: Props) {
   const [title, setTitle] = useState(page.title);
   const [visibility, setVisibility] = useState<Visibility>(page.visibility);
   const [blocks, setBlocks] = useState<Block[]>(page.blocks);
   const [dirty, setDirty] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [music, setMusic] = useState(bgMusic ? `https://www.youtube.com/watch?v=${bgMusic.youtubeId}` : '');
   const [state, formAction, pending] = useActionState<FormState, FormData>(savePage, undefined);
 
   useEffect(() => {
@@ -94,7 +94,7 @@ export function PageEditor({ wikiId, wikiTitle, page, canDelete, lastPageError }
           </div>
 
           <Notice
-            error={state?.error ?? (lastPageError ? 'A wiki precisa ter pelo menos uma página.' : undefined)}
+            error={state?.error}
             ok={state?.ok}
           />
 
@@ -135,6 +135,44 @@ export function PageEditor({ wikiId, wikiTitle, page, canDelete, lastPageError }
           <p className="muted" style={{ margin: 0, fontSize: '0.875rem' }}>
             A página nunca fica mais aberta que a wiki: se a wiki for privada, a página também será.
           </p>
+
+          <fieldset className="choice-group">
+            <legend>Música de fundo da página</legend>
+            <div className="row" style={{ alignItems: 'flex-end' }}>
+              <div className="field" style={{ flex: '1 1 320px' }}>
+                <label htmlFor="bgMusic">Link do YouTube (deixe vazio para não ter música)</label>
+                <input
+                  id="bgMusic"
+                  name="bgMusic"
+                  type="text"
+                  inputMode="url"
+                  value={music}
+                  onChange={(e) => {
+                    setMusic(e.target.value);
+                    setDirty(true);
+                  }}
+                  placeholder="https://www.youtube.com/watch?v=…"
+                  aria-describedby="bgMusic-help"
+                />
+              </div>
+              {music && (
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  onClick={() => {
+                    setMusic('');
+                    setDirty(true);
+                  }}
+                >
+                  Remover música
+                </button>
+              )}
+            </div>
+            <small id="bgMusic-help" className="muted">
+              {bgMusic ? `Atual: ${bgMusic.title}. ` : ''}Visitantes escolhem se querem tocar; o volume fica limitado a 20%
+              do volume do dispositivo.
+            </small>
+          </fieldset>
 
           <ol className="block-list">
             {blocks.map((block, i) => (
@@ -177,12 +215,12 @@ export function PageEditor({ wikiId, wikiTitle, page, canDelete, lastPageError }
         </form>
       </Window>
 
-      {canDelete && (
-        <Window title="Excluir página" icon="window">
+      {(
+        <Window title="Excluir página" icon="trash">
           <form action={deletePage} className="row" style={{ justifyContent: 'space-between' }}>
             <input type="hidden" name="wikiId" value={wikiId} />
             <input type="hidden" name="pageId" value={page.id} />
-            <p style={{ margin: 0 }}>A página e o histórico de versões serão apagados.</p>
+            <p style={{ margin: 0 }}>A página e o histórico de versões serão apagados. Esta ação não pode ser desfeita.</p>
             {confirmDelete ? (
               <div className="row">
                 <button type="button" className="btn btn--ghost" onClick={() => setConfirmDelete(false)}>
@@ -193,7 +231,8 @@ export function PageEditor({ wikiId, wikiTitle, page, canDelete, lastPageError }
                 </button>
               </div>
             ) : (
-              <button type="button" className="btn" onClick={() => setConfirmDelete(true)}>
+              <button type="button" className="btn btn--danger" onClick={() => setConfirmDelete(true)}>
+                <Icon name="trash" className="btn__icon" />
                 Excluir página
               </button>
             )}

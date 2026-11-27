@@ -11,6 +11,9 @@ type YTPlayer = {
   loadVideoById(id: string): void;
   playVideo(): void;
   pauseVideo(): void;
+  seekTo(seconds: number, allowSeekAhead: boolean): void;
+  setVolume(volume: number): void;
+  getVolume(): number;
   destroy(): void;
 };
 type YTEvent = { data: number; target: YTPlayer };
@@ -61,8 +64,11 @@ type MusicContextValue = {
   index: number;
   status: Status;
   current: Track | null;
-  playQueue: (tracks: Track[], start: number, title: string) => void;
+  playQueue: (tracks: Track[], start: number, title: string, options?: PlayOptions) => void;
 };
+
+/** maxVolume: teto de volume (0–100, relativo ao volume do dispositivo). loop: repete a fila. */
+export type PlayOptions = { maxVolume?: number; loop?: boolean };
 
 const MusicContext = createContext<MusicContextValue | null>(null);
 
@@ -84,6 +90,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>('idle');
   const [minimized, setMinimized] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [maxVolume, setMaxVolume] = useState(100);
+  const [volume, setVolume] = useState(100);
+  const [loop, setLoop] = useState(false);
+  const maxVolumeRef = useRef(100);
+  const volumeRef = useRef(100);
+  const loopRef = useRef(false);
+  maxVolumeRef.current = maxVolume;
+  volumeRef.current = volume;
+  loopRef.current = loop;
   const holder = useRef<HTMLDivElement>(null);
   const player = useRef<YTPlayer | null>(null);
   const queueRef = useRef<Track[]>([]);
@@ -121,13 +136,19 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         height: '100%',
         playerVars: { rel: 0, playsinline: 1, modestbranding: 1 },
         events: {
-          onReady: (e) => e.target.playVideo(),
+          onReady: (e) => {
+            e.target.setVolume(Math.min(volumeRef.current, maxVolumeRef.current));
+            e.target.playVideo();
+          },
           onStateChange: (e) => {
-            if (e.data === 1) setStatus('playing');
-            else if (e.data === 2) setStatus('paused');
+            if (e.data === 1) {
+              setStatus('playing');
+              e.target.setVolume(Math.min(volumeRef.current, maxVolumeRef.current));
+            } else if (e.data === 2) setStatus('paused');
             else if (e.data === 0) {
               const next = indexRef.current + 1;
               if (next < queueRef.current.length) goTo(next);
+              else if (loopRef.current) goTo(0);
               else setStatus('paused');
             }
           },
@@ -144,8 +165,16 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   );
 
   const playQueue = useCallback(
-    (tracks: Track[], start: number, playlistTitle: string) => {
+    (tracks: Track[], start: number, playlistTitle: string, options: PlayOptions = {}) => {
       if (tracks.length === 0) return;
+      const cap = Math.min(100, Math.max(0, options.maxVolume ?? 100));
+      setMaxVolume(cap);
+      maxVolumeRef.current = cap;
+      setVolume(cap);
+      volumeRef.current = cap;
+      setLoop(Boolean(options.loop));
+      loopRef.current = Boolean(options.loop);
+      player.current?.setVolume(cap);
       const i = Math.min(Math.max(0, start), tracks.length - 1);
       setQueue(tracks);
       queueRef.current = tracks;
@@ -186,6 +215,22 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => () => player.current?.destroy(), []);
+
+  // Mantém o volume dentro do teto, mesmo se alguém mexer no controle do próprio YouTube.
+  useEffect(() => {
+    if (maxVolume >= 100 || status !== 'playing') return;
+    const timer = setInterval(() => {
+      const p = player.current;
+      if (p && p.getVolume() > maxVolumeRef.current) p.setVolume(maxVolumeRef.current);
+    }, 500);
+    return () => clearInterval(timer);
+  }, [maxVolume, status]);
+
+  const changeVolume = (v: number) => {
+    const next = Math.min(v, maxVolume);
+    setVolume(next);
+    player.current?.setVolume(next);
+  };
 
   const value = useMemo<MusicContextValue>(
     () => ({ queue, index, status, current, playQueue }),
@@ -257,6 +302,24 @@ export function MusicProvider({ children }: { children: ReactNode }) {
             </button>
           </div>
         </div>
+        {!minimized && (
+          <div className="miniplayer__volume">
+            <label htmlFor="mini-volume">Volume</label>
+            <input
+              id="mini-volume"
+              type="range"
+              min={0}
+              max={maxVolume}
+              step={1}
+              value={volume}
+              onChange={(e) => changeVolume(Number(e.target.value))}
+              aria-valuetext={`${volume}%`}
+            />
+            <output htmlFor="mini-volume">
+              {volume}%{maxVolume < 100 ? ` (máx. ${maxVolume}%)` : ''}
+            </output>
+          </div>
+        )}
         <div className="miniplayer__screen" ref={holder} />
         {notice && (
           <p className="miniplayer__notice" role="status">

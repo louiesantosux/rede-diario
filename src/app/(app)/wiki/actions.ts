@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { blockMediaIds, sanitizeBlocks, templatePages, TEMPLATES, type TemplateId } from '@/lib/blocks';
 import { THEME_PRESETS, sanitizeTheme } from '@/lib/wikiTheme';
+import { parseYouTubeId } from '@/lib/youtube';
+import { sanitizePageSettings, type PageSettings } from '@/lib/pageSettings';
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -73,15 +75,45 @@ export async function savePage(_prev: FormState, form: FormData): Promise<FormSt
   const blocks = sanitizeBlocks(raw);
 
   const supabase = await createClient();
-  const { data: current } = await supabase.from('pages').select('id, wiki_id, title, blocks').eq('id', pageId).single();
+  const { data: current } = await supabase
+    .from('pages')
+    .select('id, wiki_id, title, blocks, theme')
+    .eq('id', pageId)
+    .single();
   if (!current) return { error: 'Página não encontrada.' };
+
+  // Música de fundo (link do YouTube). Vazio = sem música.
+  const settings: PageSettings = sanitizePageSettings(current.theme);
+  const musicInput = str(form, 'bgMusic', 500);
+  if (!musicInput) {
+    settings.bgMusic = null;
+  } else {
+    const videoId = parseYouTubeId(musicInput);
+    if (!videoId) return { error: 'O link da música de fundo não é um link válido do YouTube.' };
+    if (settings.bgMusic?.youtubeId !== videoId) {
+      let title = 'Música de fundo';
+      try {
+        const res = await fetch(
+          `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`,
+          { signal: AbortSignal.timeout(5000), cache: 'no-store' },
+        );
+        if (res.status === 401 || res.status === 403 || res.status === 404) {
+          return { error: 'A música de fundo é um vídeo privado, removido ou que não permite ser incorporado.' };
+        }
+        if (res.ok) title = ((await res.json()) as { title?: string }).title?.slice(0, 200) || title;
+      } catch {
+        /* mantém o título padrão */
+      }
+      settings.bgMusic = { youtubeId: videoId, title };
+    }
+  }
 
   // Histórico de versões (RF-15): guarda o estado anterior antes de sobrescrever.
   await supabase.from('page_versions').insert({ page_id: pageId, title: current.title, blocks: current.blocks });
 
   const { error } = await supabase
     .from('pages')
-    .update({ title, blocks, visibility: vis(form.get('visibility')) })
+    .update({ title, blocks, visibility: vis(form.get('visibility')), theme: settings })
     .eq('id', pageId);
 
   if (error) {
@@ -171,11 +203,10 @@ export async function deletePage(form: FormData) {
   if (!wikiId || !pageId) redirect('/meu-espaco');
 
   const supabase = await createClient();
-  const { count } = await supabase.from('pages').select('id', { count: 'exact', head: true }).eq('wiki_id', wikiId);
-  if ((count ?? 0) <= 1) redirect(`/wiki/${wikiId}/editar?p=${pageId}&erro=ultima`);
-
-  await supabase.from('pages').delete().eq('id', pageId);
-  redirect(`/wiki/${wikiId}`);
+  const { error } = await supabase.from('pages').delete().eq('id', pageId).eq('wiki_id', wikiId);
+  if (error) console.error('[deletePage]', error.code, error.message);
+  revalidatePath(`/wiki/${wikiId}`);
+  redirect(`/wiki/${wikiId}?aviso=pagina-excluida`);
 }
 
 export async function deleteWiki(form: FormData) {

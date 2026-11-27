@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { sanitizeBlocks } from '@/lib/blocks';
+import { sanitizePageSettings } from '@/lib/pageSettings';
 import { PageEditor } from './PageEditor';
 
 export const metadata: Metadata = { title: 'Editar página' };
@@ -23,15 +24,13 @@ export default async function EditarPaginaPage({ params, searchParams }: Props) 
 
   const { data: pages } = await supabase
     .from('pages')
-    .select('id, title, blocks, visibility')
+    .select('id, title, blocks, visibility, theme')
     .eq('wiki_id', id)
     .order('position', { ascending: true });
 
   const wanted = Array.isArray(sp.p) ? sp.p[0] : sp.p;
   const page = (pages ?? []).find((p) => p.id === wanted) ?? pages?.[0];
   if (!page) redirect(`/wiki/${id}`);
-
-  const erro = Array.isArray(sp.erro) ? sp.erro[0] : sp.erro;
 
   return (
     <main id="conteudo" className="page page--wide">
@@ -45,8 +44,7 @@ export default async function EditarPaginaPage({ params, searchParams }: Props) 
           visibility: page.visibility,
           blocks: sanitizeBlocks(page.blocks),
         }}
-        canDelete={(pages ?? []).length > 1}
-        lastPageError={erro === 'ultima'}
+        bgMusic={sanitizePageSettings(page.theme).bgMusic}
       />
     </main>
   );

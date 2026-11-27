@@ -1,8 +1,9 @@
 'use client';
 
-import type { CSSProperties, KeyboardEvent } from 'react';
+import { useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { useEditorState, type Editor } from '@tiptap/react';
 import { Icon, type IconName } from '@/components/Icon';
+import { LinkDialog } from './LinkDialog';
 
 type ToolButton = {
   label: string;
@@ -35,11 +36,13 @@ export function Toolbar({
       bullet: e?.isActive('bulletList') ?? false,
       ordered: e?.isActive('orderedList') ?? false,
       quote: e?.isActive('blockquote') ?? false,
+      link: e?.isActive('link') ?? false,
       canUndo: e?.can().undo() ?? false,
       canRedo: e?.can().redo() ?? false,
     }),
   });
 
+  const [linkOpen, setLinkOpen] = useState(false);
   const chain = () => editor!.chain().focus();
   const groups: ToolButton[][] = [
     [
@@ -56,6 +59,7 @@ export function Toolbar({
       { label: 'Lista com marcadores', icon: 'list', active: s?.bullet, run: () => chain().toggleBulletList().run() },
       { label: 'Lista numerada', icon: 'listOrdered', active: s?.ordered, run: () => chain().toggleOrderedList().run() },
       { label: 'Citação', icon: 'quote', active: s?.quote, run: () => chain().toggleBlockquote().run() },
+      { label: s?.link ? 'Editar link' : 'Inserir link', icon: 'link', active: s?.link, run: () => setLinkOpen(true) },
       ...(onImage ? [{ label: 'Inserir imagem', icon: 'image' as IconName, run: onImage }] : []),
     ],
     [
@@ -77,6 +81,7 @@ export function Toolbar({
   };
 
   return (
+    <>
     <div className="toolbar" role="toolbar" aria-label={label} onKeyDown={moveFocus}>
       {groups.map((group, gi) => (
         <div key={gi} className="toolbar__group">
@@ -98,5 +103,7 @@ export function Toolbar({
         </div>
       ))}
     </div>
+    <LinkDialog editor={editor} open={linkOpen} onClose={() => setLinkOpen(false)} />
+    </>
   );
 }

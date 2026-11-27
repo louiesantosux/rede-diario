@@ -5,6 +5,9 @@ import { Window } from '@/components/Window';
 import { Icon } from '@/components/Icon';
 import { WikiBlocks, type BlockPlaylist, type BlogPost } from '@/components/wiki/WikiBlocks';
 import { WikiTabs } from '@/components/wiki/WikiTabs';
+import { BackgroundMusic } from '@/components/wiki/BackgroundMusic';
+import { Notice } from '@/components/Notice';
+import { sanitizePageSettings } from '@/lib/pageSettings';
 import { createClient } from '@/lib/supabase/server';
 import { blockMediaIds, blockPlaylistIds, sanitizeBlocks } from '@/lib/blocks';
 import { getMediaViews } from '@/lib/media';
@@ -44,7 +47,7 @@ export default async function WikiPage({ params, searchParams }: Props) {
 
   const { data: pages } = await supabase
     .from('pages')
-    .select('id, title, blocks, position')
+    .select('id, title, blocks, position, theme')
     .eq('wiki_id', id)
     .order('position', { ascending: true });
 
@@ -52,6 +55,7 @@ export default async function WikiPage({ params, searchParams }: Props) {
   const wanted = Array.isArray(sp.p) ? sp.p[0] : sp.p;
   const current = list.find((p) => p.id === wanted) ?? list[0];
   const blocks = current ? sanitizeBlocks(current.blocks) : [];
+  const pageSettings = sanitizePageSettings(current?.theme);
   const isOwner = wiki.owner_id === auth.user?.id;
   const theme = sanitizeTheme(wiki.theme);
 
@@ -98,6 +102,11 @@ export default async function WikiPage({ params, searchParams }: Props) {
         bodyStyle={themeStyle(theme)}
       >
         <div className="wiki-paper">
+          {(Array.isArray(sp.aviso) ? sp.aviso[0] : sp.aviso) === 'pagina-excluida' && (
+            <div style={{ marginBottom: 16 }}>
+              <Notice ok="Página excluída." />
+            </div>
+          )}
           <header className="wiki-header">
             <div>
               {wiki.description && <p className="wiki-description">{wiki.description}</p>}
@@ -135,10 +144,19 @@ export default async function WikiPage({ params, searchParams }: Props) {
           {current ? (
             <article className="wiki-page">
               <h2 className="wiki-page__title">{current.title}</h2>
+              {pageSettings.bgMusic && (
+                <BackgroundMusic
+                  youtubeId={pageSettings.bgMusic.youtubeId}
+                  title={pageSettings.bgMusic.title}
+                  pageTitle={current.title}
+                />
+              )}
               <WikiBlocks blocks={blocks} posts={posts} media={media} playlists={playlists} />
             </article>
           ) : (
-            <p className="wiki-empty">Nenhuma página visível nesta wiki.</p>
+            <p className="wiki-empty">
+              {isOwner ? 'Esta wiki não tem páginas. Use “+ Nova página” para criar uma.' : 'Nenhuma página visível nesta wiki.'}
+            </p>
           )}
         </div>
       </Window>

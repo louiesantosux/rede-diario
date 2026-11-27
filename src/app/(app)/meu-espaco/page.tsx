@@ -6,6 +6,7 @@ import { Notice } from '@/components/Notice';
 import { createClient } from '@/lib/supabase/server';
 import { NOTICES, pickMessage } from '@/lib/messages';
 import { sanitizeTheme } from '@/lib/wikiTheme';
+import { WikiCardList } from '@/components/wiki/WikiCardList';
 import { MediaGallery } from '@/components/MediaGallery';
 import { getMediaViews, orderedViews } from '@/lib/media';
 
@@ -71,27 +72,19 @@ export default async function MeuEspacoPage({ searchParams }: Props) {
 
       <Window title="Minhas wikis" icon="book">
         {wikis && wikis.length > 0 ? (
-          <ul className="wiki-cards">
-            {wikis.map((w) => {
+          <WikiCardList
+            wikis={wikis.map((w) => {
               const t = sanitizeTheme(w.theme);
-              return (
-                <li key={w.id}>
-                  <Link href={`/wiki/${w.id}`} className="wiki-card">
-                    <span className="wiki-card__swatch" style={{ background: t.bg, borderColor: t.accent }} aria-hidden="true">
-                      <span style={{ background: t.surface }} />
-                    </span>
-                    <span className="wiki-card__text">
-                      <span className="wiki-card__title">{w.title}</span>
-                      <span className="wiki-card__hint">
-                        {VIS_LABEL[w.visibility]}
-                        {w.description ? ` · ${w.description}` : ''}
-                      </span>
-                    </span>
-                  </Link>
-                </li>
-              );
+              return {
+                id: w.id as string,
+                title: w.title as string,
+                hint: `${VIS_LABEL[w.visibility as string]}${w.description ? ` · ${w.description}` : ''}`,
+                bg: t.bg,
+                surface: t.surface,
+                accent: t.accent,
+              };
             })}
-          </ul>
+          />
         ) : (
           <p style={{ marginTop: 0 }}>Você ainda não criou nenhuma wiki.</p>
         )}

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState, useTransition, type MutableRefObject } from 'react';
+import { useEffect, useRef, useState, useTransition, type MutableRefObject } from 'react';
 import {
   DndContext,
   KeyboardSensor,
@@ -19,7 +19,8 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { reorderPages, createPage } from '@/app/(app)/wiki/actions';
+import { reorderPages, createPage, deletePage } from '@/app/(app)/wiki/actions';
+import { Icon } from '@/components/Icon';
 
 type Page = { id: string; title: string };
 
@@ -31,6 +32,7 @@ export function WikiTabs({ wikiId, pages, currentId, isOwner }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const justDragged = useRef(false);
+  const [toDelete, setToDelete] = useState<Page | null>(null);
 
   const sensors = useSensors(
     // Só começa a arrastar depois de 6 px: um clique simples continua abrindo a página.
@@ -114,6 +116,7 @@ export function WikiTabs({ wikiId, pages, currentId, isOwner }: Props) {
                 href={`/wiki/${wikiId}?p=${p.id}`}
                 current={p.id === currentId}
                 justDragged={justDragged}
+                onDelete={() => setToDelete(p)}
               />
             ))}
             <li>
@@ -135,7 +138,46 @@ export function WikiTabs({ wikiId, pages, currentId, isOwner }: Props) {
           {error}
         </p>
       )}
+      <ConfirmDelete wikiId={wikiId} page={toDelete} onCancel={() => setToDelete(null)} />
     </nav>
+  );
+}
+
+/** Confirmação antes de excluir: a exclusão apaga a página e o histórico de versões. */
+function ConfirmDelete({ wikiId, page, onCancel }: { wikiId: string; page: Page | null; onCancel: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const d = dialog.current;
+    if (!d) return;
+    if (page && !d.open) d.showModal();
+    if (!page && d.open) d.close();
+  }, [page]);
+
+  return (
+    <dialog ref={dialog} className="dialog dialog--small" aria-labelledby="delete-page-title" onClose={onCancel}>
+      <div className="window">
+        <div className="window__titlebar">
+          <h2 id="delete-page-title">Excluir página</h2>
+        </div>
+        <form action={deletePage} className="window__body stack">
+          <input type="hidden" name="wikiId" value={wikiId} />
+          <input type="hidden" name="pageId" value={page?.id ?? ''} />
+          <p style={{ margin: 0 }}>
+            Excluir <strong>{page?.title}</strong>? O conteúdo e o histórico de versões desta página serão apagados. Esta
+            ação não pode ser desfeita.
+          </p>
+          <div className="row" style={{ justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn--ghost" onClick={onCancel} autoFocus>
+              Cancelar
+            </button>
+            <button type="submit" className="btn btn--danger">
+              <Icon name="trash" className="btn__icon" />
+              Excluir
+            </button>
+          </div>
+        </form>
+      </div>
+    </dialog>
   );
 }
 
@@ -144,11 +186,13 @@ function SortableTab({
   href,
   current,
   justDragged,
+  onDelete,
 }: {
   page: Page;
   href: string;
   current: boolean;
   justDragged: MutableRefObject<boolean>;
+  onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id });
   return (
@@ -172,6 +216,15 @@ function SortableTab({
         </span>
         {page.title}
       </Link>
+      <button
+        type="button"
+        className="wiki-tabs__delete"
+        aria-label={`Excluir a página ${page.title}`}
+        title="Excluir página"
+        onClick={onDelete}
+      >
+        <Icon name="trash" />
+      </button>
     </li>
   );
 }
