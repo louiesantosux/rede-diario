@@ -129,7 +129,7 @@ export default async function AmigosPage({ searchParams }: Props) {
             {friends.map((f) => (
               <li key={f.friendship_id} className="person">
                 <span>
-                  <strong>{name(f)}</strong> <span className="muted">@{f.username}</span>
+                  <Link href={`/u/${f.username}`}><strong>{name(f)}</strong></Link> <span className="muted">@{f.username}</span>
                 </span>
                 <form action={removeFriendship}>
                   <input type="hidden" name="friendshipId" value={f.friendship_id} />
@@ -142,7 +142,7 @@ export default async function AmigosPage({ searchParams }: Props) {
           </ul>
         )}
         <p className="muted" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
-          Sua lista de amigos é visível só para você. Desfazer uma amizade não envia aviso.
+          Sua lista de amigos só aparece no seu espaço se o módulo Amigos estiver ligado, sempre em ordem alfabética. Desfazer uma amizade não envia aviso.
         </p>
       </Window>
 

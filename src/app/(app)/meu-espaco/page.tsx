@@ -9,6 +9,7 @@ import { sanitizeTheme } from '@/lib/wikiTheme';
 import { WikiCardList } from '@/components/wiki/WikiCardList';
 import { MediaGallery } from '@/components/MediaGallery';
 import { getMediaViews, orderedViews } from '@/lib/media';
+import { NotesList, type Note } from '@/components/space/Mural';
 
 export const metadata: Metadata = { title: 'Meu espaço' };
 
@@ -27,7 +28,15 @@ export default async function MeuEspacoPage({ searchParams }: Props) {
   const { data: auth } = await supabase.auth.getUser();
   const userId = auth.user!.id;
 
-  const [{ data: profile }, { data: wikis }, { data: boards }, { data: recent }, { data: playlists }] = await Promise.all([
+  const [
+    { data: profile },
+    { data: wikis },
+    { data: boards },
+    { data: recent },
+    { data: playlists },
+    { data: space },
+    { data: notes },
+  ] = await Promise.all([
     supabase.from('profiles').select('username, display_name, mood').eq('id', userId).single(),
     supabase
       .from('wikis')
@@ -45,10 +54,15 @@ export default async function MeuEspacoPage({ searchParams }: Props) {
       .select('id, title, description, visibility')
       .eq('owner_id', userId)
       .order('updated_at', { ascending: false }),
+    supabase.from('spaces').select('avatar_media_id').eq('owner_id', userId).maybeSingle(),
+    supabase.rpc('space_notes_of', { p_owner: userId }),
   ]);
+  const pending = ((notes ?? []) as Note[]).filter((n) => !n.approved);
+  const avatarId = (space?.avatar_media_id as string | null) ?? null;
   const recentIds = (recent ?? []).map((m) => m.id as string);
   const coverIds = (boards ?? []).map((b) => (b.media_ids as string[])[0]).filter(Boolean);
-  const media = await getMediaViews(supabase, [...recentIds, ...coverIds]);
+  const media = await getMediaViews(supabase, [...recentIds, ...coverIds, ...(avatarId ? [avatarId] : [])]);
+  const avatar = avatarId ? media[avatarId] : undefined;
 
   return (
     <main id="conteudo" className="page">
@@ -56,19 +70,42 @@ export default async function MeuEspacoPage({ searchParams }: Props) {
 
       <Window title="Meu espaço" icon="user" headingLevel={1}>
         <div className="profile-head">
-          <div>
-            <p className="profile-head__name">{profile?.display_name || `@${profile?.username ?? ''}`}</p>
-            <p className="muted" style={{ margin: 0 }}>
-              @{profile?.username}
-              {profile?.mood ? ` · ${profile.mood}` : ''}
-            </p>
+          <div className="profile-head__id">
+            <span className="space-avatar" aria-hidden="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {avatar ? <img src={avatar.url} alt="" /> : <Icon name="user" />}
+            </span>
+            <div>
+              <p className="profile-head__name">{profile?.display_name || `@${profile?.username ?? ''}`}</p>
+              <p className="muted" style={{ margin: 0 }}>
+                @{profile?.username}
+                {profile?.mood ? ` · ${profile.mood}` : ''}
+              </p>
+            </div>
           </div>
-          <Link href="/configuracoes" className="btn">
-            <Icon name="gear" className="btn__icon" />
-            Ajustes
-          </Link>
+          <div className="row">
+            <Link href={`/u/${profile?.username ?? ''}`} className="btn">
+              <Icon name="eye" className="btn__icon" />
+              Ver meu espaço
+            </Link>
+            <Link href="/meu-espaco/editar" className="btn btn--primary">
+              <Icon name="pen" className="btn__icon" />
+              Editar espaço
+            </Link>
+            <Link href="/configuracoes" className="btn">
+              <Icon name="gear" className="btn__icon" />
+              Ajustes
+            </Link>
+          </div>
         </div>
       </Window>
+
+      {pending.length > 0 && (
+        <Window title="Recados aguardando aprovação" icon="chat">
+          <p style={{ marginTop: 0 }}>Só aparecem no seu mural os recados que você aprovar.</p>
+          <NotesList notes={pending} isOwner empty="" />
+        </Window>
+      )}
 
       <Window title="Minhas wikis" icon="book">
         {wikis && wikis.length > 0 ? (
