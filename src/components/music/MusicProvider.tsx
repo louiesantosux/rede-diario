@@ -14,6 +14,8 @@ type YTPlayer = {
   seekTo(seconds: number, allowSeekAhead: boolean): void;
   setVolume(volume: number): void;
   getVolume(): number;
+  getCurrentTime(): number;
+  getDuration(): number;
   destroy(): void;
 };
 type YTEvent = { data: number; target: YTPlayer };
@@ -79,10 +81,19 @@ export function useMusic() {
 }
 
 /**
- * Mantém um único player do YouTube vivo enquanto a pessoa navega pelo site,
- * exibido no miniplayer. Pelas regras do YouTube o vídeo fica sempre visível
- * (mínimo de 200 px) enquanto toca; ao minimizar, a música pausa.
+ * Mantém um único player do YouTube vivo enquanto a pessoa navega pelo site.
+ * O miniplayer mostra só a barra de reprodução; o vídeo fica oculto.
+ * Atenção: as Políticas para Desenvolvedores do YouTube exigem o player visível
+ * (mínimo de 200 × 200 px). Para voltar a exibir o vídeo, mude SHOW_VIDEO para true.
  */
+const SHOW_VIDEO = false;
+
+const formatTime = (s: number) => {
+  if (!Number.isFinite(s) || s < 0) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${String(sec).padStart(2, '0')}`;
+};
 export function MusicProvider({ children }: { children: ReactNode }) {
   const [queue, setQueue] = useState<Track[]>([]);
   const [index, setIndex] = useState(0);
@@ -93,6 +104,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const [maxVolume, setMaxVolume] = useState(100);
   const [volume, setVolume] = useState(100);
   const [loop, setLoop] = useState(false);
+  const [time, setTime] = useState({ current: 0, duration: 0 });
   const maxVolumeRef = useRef(100);
   const volumeRef = useRef(100);
   const loopRef = useRef(false);
@@ -195,15 +207,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     else player.current.playVideo();
   };
 
-  const minimize = () => {
-    player.current?.pauseVideo();
-    setMinimized(true);
-  };
-
-  const restore = () => {
-    setMinimized(false);
-    player.current?.playVideo();
-  };
+  const minimize = () => setMinimized(true);
+  const restore = () => setMinimized(false);
 
   const close = () => {
     player.current?.destroy();
@@ -225,6 +230,21 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     }, 500);
     return () => clearInterval(timer);
   }, [maxVolume, status]);
+
+  // Atualiza a barra de progresso enquanto toca.
+  useEffect(() => {
+    if (status !== 'playing') return;
+    const timer = setInterval(() => {
+      const p = player.current;
+      if (p) setTime({ current: p.getCurrentTime(), duration: p.getDuration() });
+    }, 500);
+    return () => clearInterval(timer);
+  }, [status]);
+
+  const seek = (seconds: number) => {
+    player.current?.seekTo(seconds, true);
+    setTime((t) => ({ ...t, current: seconds }));
+  };
 
   const changeVolume = (v: number) => {
     const next = Math.min(v, maxVolume);
@@ -261,9 +281,19 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           </div>
           <div className="miniplayer__controls">
             {minimized ? (
-              <button type="button" className="toolbar__btn" onClick={restore} aria-label="Abrir miniplayer e continuar">
-                {'▶\uFE0E'}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="toolbar__btn"
+                  onClick={toggle}
+                  aria-label={status === 'playing' ? 'Pausar' : 'Tocar'}
+                >
+                  {status === 'playing' ? '⏸\uFE0E' : '▶\uFE0E'}
+                </button>
+                <button type="button" className="toolbar__btn" onClick={restore} aria-label="Expandir miniplayer">
+                  <Icon name="window" />
+                </button>
+              </>
             ) : (
               <>
                 <button
@@ -292,7 +322,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
                 >
                   {'⏭\uFE0E'}
                 </button>
-                <button type="button" className="toolbar__btn" onClick={minimize} aria-label="Minimizar (pausa a música)">
+                <button type="button" className="toolbar__btn" onClick={minimize} aria-label="Minimizar">
                   <Icon name="window" />
                 </button>
               </>
@@ -302,6 +332,22 @@ export function MusicProvider({ children }: { children: ReactNode }) {
             </button>
           </div>
         </div>
+        {!minimized && (
+          <div className="miniplayer__progress">
+            <output>{formatTime(time.current)}</output>
+            <input
+              type="range"
+              min={0}
+              max={Math.max(1, Math.floor(time.duration))}
+              step={1}
+              value={Math.min(Math.floor(time.current), Math.max(1, Math.floor(time.duration)))}
+              onChange={(e) => seek(Number(e.target.value))}
+              aria-label="Posição da música"
+              aria-valuetext={`${formatTime(time.current)} de ${formatTime(time.duration)}`}
+            />
+            <output>{formatTime(time.duration)}</output>
+          </div>
+        )}
         {!minimized && (
           <div className="miniplayer__volume">
             <label htmlFor="mini-volume">Volume</label>
@@ -320,7 +366,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
             </output>
           </div>
         )}
-        <div className="miniplayer__screen" ref={holder} />
+        <div className={SHOW_VIDEO ? 'miniplayer__screen' : 'miniplayer__screen miniplayer__screen--hidden'} ref={holder} />
         {notice && (
           <p className="miniplayer__notice" role="status">
             {notice}
