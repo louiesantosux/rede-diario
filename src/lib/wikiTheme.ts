@@ -1,8 +1,20 @@
 import type { CSSProperties } from 'react';
 import { HEX_RE, contrastRatio } from './contrast';
 
-export const PATTERNS = ['nenhum', 'pontos', 'xadrez', 'listras', 'estrelas', 'bolhas'] as const;
-export const FONTS = ['sistema', 'serifa', 'arredondada', 'maquina'] as const;
+export const PATTERNS = [
+  'nenhum',
+  'pontos',
+  'xadrez',
+  'listras',
+  'estrelas',
+  'bolhas',
+  'oncinha',
+  'zebra',
+  'xadrez-grande',
+  'grade',
+  'feixes',
+] as const;
+export const FONTS = ['sistema', 'serifa', 'arredondada', 'maquina', 'verdana', 'pixel'] as const;
 
 export type WikiTheme = {
   bg: string;
@@ -20,6 +32,11 @@ export const PATTERN_LABEL: Record<WikiTheme['pattern'], string> = {
   listras: 'Listras',
   estrelas: 'Estrelas',
   bolhas: 'Bolhas',
+  oncinha: 'Oncinha',
+  zebra: 'Zebra',
+  'xadrez-grande': 'Xadrez grande',
+  grade: 'Grade neon',
+  feixes: 'Feixes de luz (Aero)',
 };
 
 export const FONT_LABEL: Record<WikiTheme['font'], string> = {
@@ -27,6 +44,8 @@ export const FONT_LABEL: Record<WikiTheme['font'], string> = {
   serifa: 'Serifa (livro)',
   arredondada: 'Arredondada (Y2K)',
   maquina: 'Máquina de escrever',
+  verdana: 'Verdana negrito (2006)',
+  pixel: 'Pixel / terminal',
 };
 
 export const THEME_PRESETS: { id: string; label: string; theme: WikiTheme }[] = [

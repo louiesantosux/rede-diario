@@ -8,6 +8,7 @@ import { MediaGallery } from '@/components/MediaGallery';
 import { BackgroundMusic } from '@/components/wiki/BackgroundMusic';
 import { NotesList, type Note } from '@/components/space/Mural';
 import { NoteForm } from '@/components/space/NoteForm';
+import { SpaceOrnaments } from '@/components/space/SpaceOrnaments';
 import { createClient } from '@/lib/supabase/server';
 import { getMediaViews, orderedViews } from '@/lib/media';
 import { docMediaIds, isPostBody, sanitizeDoc } from '@/lib/richtext';
@@ -283,6 +284,7 @@ export default async function SpacePage({ params }: Props) {
   return (
     <main id="conteudo" className="page page--wide">
       <div className={spaceClass(theme, Boolean(bg))} style={spaceStyle(theme, bg?.url)}>
+        <SpaceOrnaments ornament={theme.ornament} />
         {s.is_owner && (
           <div className="space-owner-bar" role="note">
             <span>

@@ -915,6 +915,67 @@ a.start-menu__item:focus-visible {
     radial-gradient(circle at 45% 85%, var(--w-line) 0 1px, transparent 1.5px);
   background-size: 70px 70px, 110px 110px, 50px 50px;
 }
+.wiki-pattern--oncinha {
+  background-image:
+    radial-gradient(ellipse 8px 11px at 20px 22px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 11px 6px at 33px 15px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 6px 10px at 41px 30px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 10px 6px at 27px 41px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 5px 7px at 13px 33px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 9px 6px at 76px 64px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 7px 9px at 90px 57px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 6px 10px at 97px 72px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 10px 6px at 83px 83px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 5px 7px at 70px 76px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 5px 4px at 60px 22px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 6px 5px at 15px 82px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 4px 5px at 108px 28px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 5px 4px at 48px 92px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%),
+    radial-gradient(ellipse 4px 4px at 112px 95px, var(--w-pat, var(--w-line)) 0 88%, transparent 100%);
+  background-size: 120px 104px;
+}
+.wiki-pattern--zebra {
+  background-image:
+    repeating-linear-gradient(
+      112deg,
+      var(--w-pat, var(--w-line)) 0 14px,
+      transparent 14px 30px,
+      var(--w-pat, var(--w-line)) 30px 37px,
+      transparent 37px 58px,
+      var(--w-pat, var(--w-line)) 58px 66px,
+      transparent 66px 80px
+    );
+}
+.wiki-pattern--xadrez-grande {
+  background-image: conic-gradient(var(--w-pat, var(--w-faint)) 25%, transparent 0 50%, var(--w-pat, var(--w-faint)) 0 75%, transparent 0);
+  background-size: 96px 96px;
+}
+.wiki-pattern--grade {
+  background-image:
+    linear-gradient(var(--w-pat, var(--w-faint)) 1px, transparent 1px),
+    linear-gradient(90deg, var(--w-pat, var(--w-faint)) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+.wiki-pattern--feixes {
+  background-image:
+    radial-gradient(ellipse 70% 45% at 18% -5%, rgba(255, 255, 255, 0.35), transparent 70%),
+    linear-gradient(118deg, transparent 30%, rgba(255, 255, 255, 0.22) 42%, transparent 52%),
+    linear-gradient(118deg, transparent 50%, rgba(255, 255, 255, 0.18) 56%, transparent 63%),
+    linear-gradient(165deg, transparent 40%, rgba(0, 40, 90, 0.25) 100%);
+  background-attachment: fixed;
+}
+.wiki-font--verdana {
+  font-family: Verdana, Tahoma, Geneva, sans-serif;
+  font-weight: 700;
+}
+.wiki-font--verdana p,
+.wiki-font--verdana li {
+  font-weight: 400;
+}
+.wiki-font--pixel {
+  font-family: 'Lucida Console', 'Courier New', ui-monospace, monospace;
+  letter-spacing: 0.02em;
+}
 .wiki-pattern--bolhas {
   background-image:
     radial-gradient(circle at 30% 30%, var(--w-faint) 0 22px, transparent 23px),
@@ -2221,7 +2282,7 @@ a.start-menu__item:focus-visible {
   --w-on-accent: var(--on-accent) !important;
 }
 .space a {
-  color: var(--w-accent);
+  color: var(--w-link, var(--w-accent));
 }
 .space .btn {
   color: var(--text);
@@ -2413,7 +2474,7 @@ a.start-menu__item:focus-visible {
 .space-card__title {
   display: block;
   font-weight: 700;
-  color: var(--w-accent);
+  color: var(--w-link, var(--w-accent));
 }
 .space-card__hint {
   display: block;
@@ -3240,4 +3301,191 @@ a.start-menu__item:focus-visible {
     bottom: calc(var(--taskbar-h) + 8px);
     width: auto;
   }
+}
+
+/* ---------- Estilos de janela do espaço ---------- */
+/* Clássico 2006: barra sólida, contorno escuro e sombra dura deslocada */
+.space--classico .space-box {
+  border: 2px solid var(--w-accent);
+  box-shadow: 7px 7px 0 rgba(0, 0, 0, 0.6);
+}
+.space--classico .space-box__title h2,
+.space--classico .space-box__title > span:first-child {
+  font-size: 1.05rem;
+  text-transform: lowercase;
+}
+/* Neon: borda dupla com brilho */
+.space--neon .space-box {
+  border: 2px solid var(--w-accent);
+  box-shadow:
+    0 0 0 3px var(--w-surface),
+    0 0 0 5px var(--w-accent),
+    0 0 22px color-mix(in srgb, var(--w-accent) 55%, transparent);
+}
+.space--neon .space-box__title {
+  background: color-mix(in srgb, var(--w-accent) 88%, #000);
+}
+/* Adesivo: contorno fino claro, título como texto simples */
+.space--adesivo .space-box {
+  border: 2px solid var(--w-text);
+  box-shadow: none;
+}
+.space--adesivo .space-box__title {
+  background: none;
+  color: var(--w-text);
+  padding-bottom: 0;
+}
+.space--adesivo .space-box__title h2,
+.space--adesivo .space-box__title > span:first-child {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+/* Vidro escuro: translúcido com desfoque */
+.space--vidro-escuro .space-box {
+  background: color-mix(in srgb, var(--w-surface) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--w-text) 22%, transparent);
+  backdrop-filter: blur(10px) saturate(1.2);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+}
+.space--vidro-escuro .space-box__title {
+  background: color-mix(in srgb, var(--w-text) 8%, transparent);
+  color: var(--w-accent);
+  border-bottom: 1px solid color-mix(in srgb, var(--w-text) 18%, transparent);
+}
+[data-reduce-transparency='true'] .space--vidro-escuro .space-box {
+  background: var(--w-surface);
+  backdrop-filter: none;
+}
+/* Aparelho retrô: corpo bege com bisel e visor LCD no título */
+.space--aparelho .space-box {
+  border: 2px solid color-mix(in srgb, var(--w-text) 35%, transparent);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.12),
+    0 8px 22px rgba(0, 0, 0, 0.45);
+}
+.space--aparelho .space-box__title {
+  margin: 10px 10px 0;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--w-accent) 22%, #0f160b);
+  color: color-mix(in srgb, var(--w-accent) 55%, #f2ffd8);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+  font-family: 'Lucida Console', 'Courier New', monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.space--aparelho .space-box__title h2,
+.space--aparelho .space-box__title > span:first-child {
+  font-size: 0.85rem;
+}
+/* Cromado: barra metálica e bisel de skin do XP */
+.space--cromado .space-box {
+  border: 1px solid color-mix(in srgb, var(--w-accent) 70%, #000);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7),
+    0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.space--cromado .space-box__title {
+  background: linear-gradient(180deg, #f6f7fb 0%, #c9cde0 46%, #a7adc8 52%, #dfe2ee 100%);
+  color: #1d2135;
+  border-bottom: 1px solid color-mix(in srgb, var(--w-accent) 60%, #000);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* ---------- Enfeites ---------- */
+.space--enfeites {
+  position: relative;
+  overflow: hidden;
+}
+.space-ornaments {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.space-ornaments span {
+  position: absolute;
+  line-height: 1;
+  color: var(--w-pat, var(--w-accent));
+  opacity: 0.9;
+  -webkit-text-stroke: 1px var(--w-text);
+  font-family: 'Segoe UI Symbol', 'DejaVu Sans', sans-serif;
+}
+.space--enfeites > :not(.space-ornaments) {
+  position: relative;
+  z-index: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-reduce-motion='false'] .space-ornaments span:nth-child(odd) {
+    animation: brilho-enfeite 3.2s ease-in-out infinite alternate;
+  }
+}
+@keyframes brilho-enfeite {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 0.95;
+  }
+}
+[data-reading-mode='true'] .space:not(.wiki-preview) .space-ornaments {
+  display: none;
+}
+
+/* ---------- Galeria de temas do espaço ---------- */
+.theme-gallery {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+.theme-card {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.theme-card[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--glow);
+}
+.theme-card__preview.space {
+  min-height: 0;
+  height: 92px;
+  padding: 10px;
+  gap: 0;
+  border-radius: 4px;
+  pointer-events: none;
+}
+.theme-card__preview .space-box__title {
+  padding: 3px 8px;
+  font-size: 0.7rem;
+}
+.theme-card__preview .space-box__body {
+  padding: 6px 8px;
+  font-size: 0.7rem;
+}
+.theme-card__preview .space-ornaments span {
+  font-size: 0.9rem !important;
+}
+.theme-card__name {
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+.theme-card__hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.theme-card__link {
+  color: var(--w-link, var(--w-accent));
+  text-decoration: underline;
 }

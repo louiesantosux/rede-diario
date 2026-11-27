@@ -11,7 +11,8 @@ import { ImagePicker } from '@/components/wiki/ImagePicker';
 import { createClient } from '@/lib/supabase/client';
 import { signedUrls } from '@/lib/mediaClient';
 import { contrastLevel } from '@/lib/contrast';
-import { FONTS, FONT_LABEL, PATTERNS, PATTERN_LABEL, THEME_PRESETS, themeChecks, themePasses } from '@/lib/wikiTheme';
+import { FONTS, FONT_LABEL, PATTERNS, PATTERN_LABEL } from '@/lib/wikiTheme';
+import { SpaceOrnaments } from '@/components/space/SpaceOrnaments';
 import {
   BG_FITS,
   BG_FIT_LABEL,
@@ -29,7 +30,7 @@ import {
 } from '@/lib/space';
 import { BG_MUSIC_MAX_VOLUME } from '@/lib/pageSettings';
 import { saveSpace, saveSpaceMedia, type FormState, type SpaceMediaInput } from '../actions';
-import { bgLayers } from '@/lib/space';
+import { ORNAMENTS, ORNAMENT_LABEL, SPACE_THEMES, bgLayers, spaceChecks } from '@/lib/space';
 import { ModuleList } from './ModuleList';
 
 type Props = {
@@ -68,8 +69,11 @@ export function SpaceEditor(props: Props) {
   );
   const [picking, setPicking] = useState<'avatar' | 'bg' | null>(null);
 
-  const checks = themeChecks(theme);
-  const passes = themePasses(theme);
+  const checks = spaceChecks(theme);
+  const passes = checks.every((c) => c.ratio >= 4.5);
+  const activePreset = SPACE_THEMES.find((p) =>
+    (Object.keys(p.theme) as (keyof typeof p.theme)[]).every((k) => p.theme[k] === theme[k]),
+  )?.id;
   const set = <K extends keyof SpaceTheme>(key: K, value: SpaceTheme[K]) => {
     setTheme((t) => ({ ...t, [key]: value }));
     setDirty(true);
@@ -330,28 +334,43 @@ export function SpaceEditor(props: Props) {
         <div className="theme-editor">
           <div className="stack">
             <fieldset className="choice-group">
-              <legend>Começar de um tema pronto</legend>
-              <div className="preset-row">
-                {THEME_PRESETS.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className="preset"
-                    onClick={() => {
-                      setTheme((t) => ({ ...t, ...p.theme }));
-                      setDirty(true);
-                    }}
-                  >
-                    <span className="swatches" aria-hidden="true">
-                      <span style={{ background: p.theme.bg }} />
-                      <span style={{ background: p.theme.surface }} />
-                      <span style={{ background: p.theme.text }} />
-                      <span style={{ background: p.theme.accent }} />
-                    </span>
-                    {p.label}
-                  </button>
-                ))}
-              </div>
+              <legend>Temas prontos</legend>
+              <ul className="theme-gallery">
+                {SPACE_THEMES.map((p) => {
+                  const look = { ...theme, ...p.theme };
+                  return (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        className="theme-card"
+                        aria-pressed={activePreset === p.id}
+                        onClick={() => {
+                          setTheme((t) => ({ ...t, ...p.theme }));
+                          setDirty(true);
+                        }}
+                      >
+                        <span className={`${spaceClass(look, false)} wiki-preview theme-card__preview`} style={spaceStyle(look)} aria-hidden="true">
+                          <SpaceOrnaments ornament={look.ornament} scale={0.45} />
+                          <span className="space-box">
+                            <span className="space-box__title">
+                              <span>sobre mim</span>
+                            </span>
+                            <span className="space-box__body" style={{ display: 'block' }}>
+                              oi! <span className="theme-card__link">link</span>
+                            </span>
+                          </span>
+                        </span>
+                        <span className="theme-card__name">{p.label}</span>
+                        <span className="theme-card__hint">{p.hint}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <small className="muted">
+                O tema troca cores, padrão, fonte, janelas, cantos e enfeites. Foto, fundo e música continuam. Depois dá
+                para ajustar tudo abaixo.
+              </small>
             </fieldset>
 
             <fieldset className="choice-group">
@@ -360,6 +379,30 @@ export function SpaceEditor(props: Props) {
                 {COLOR_FIELDS.map((f) => (
                   <ColorPicker key={f.key} label={f.label} value={theme[f.key]} onChange={(hex) => set(f.key, hex)} />
                 ))}
+                <div className="stack" style={{ gap: 4 }}>
+                  <ColorPicker
+                    label={theme.linkColor ? 'Links' : 'Links (igual ao destaque)'}
+                    value={theme.linkColor ?? theme.accent}
+                    onChange={(hex) => set('linkColor', hex)}
+                  />
+                  {theme.linkColor && (
+                    <button type="button" className="btn btn--ghost" onClick={() => set('linkColor', null)}>
+                      Usar a cor de destaque
+                    </button>
+                  )}
+                </div>
+                <div className="stack" style={{ gap: 4 }}>
+                  <ColorPicker
+                    label={theme.patternColor ? 'Padrão e enfeites' : 'Padrão e enfeites (automático)'}
+                    value={theme.patternColor ?? theme.accent}
+                    onChange={(hex) => set('patternColor', hex)}
+                  />
+                  {theme.patternColor && (
+                    <button type="button" className="btn btn--ghost" onClick={() => set('patternColor', null)}>
+                      Voltar ao automático
+                    </button>
+                  )}
+                </div>
               </div>
             </fieldset>
 
@@ -403,6 +446,20 @@ export function SpaceEditor(props: Props) {
                   {WINDOW_STYLES.map((w) => (
                     <option key={w} value={w}>
                       {WINDOW_STYLE_LABEL[w]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field" style={{ flex: '1 1 150px' }}>
+                <label htmlFor="ornament">Enfeites</label>
+                <select
+                  id="ornament"
+                  value={theme.ornament}
+                  onChange={(e) => set('ornament', e.target.value as SpaceTheme['ornament'])}
+                >
+                  {ORNAMENTS.map((o) => (
+                    <option key={o} value={o}>
+                      {ORNAMENT_LABEL[o]}
                     </option>
                   ))}
                 </select>
@@ -477,6 +534,7 @@ export function SpaceEditor(props: Props) {
               Prévia
             </p>
             <div className={`${spaceClass(theme, Boolean(bg?.url))} wiki-preview space--preview`} style={spaceStyle(theme, bg?.url)}>
+              <SpaceOrnaments ornament={theme.ornament} scale={0.7} />
               <div className="space-box">
                 <div className="space-box__title">
                   <span>Sobre mim</span>
