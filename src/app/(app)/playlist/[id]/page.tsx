@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Window } from '@/components/Window';
+import { Notice } from '@/components/Notice';
 import { PlaylistPlayer, type Track } from '@/components/PlaylistPlayer';
 import { createClient } from '@/lib/supabase/server';
 import { deletePlaylist, moveTrack, removeTrack, updatePlaylist } from '../actions';
@@ -8,10 +9,16 @@ import { AddTrackForm } from './AddTrackForm';
 
 export const metadata: Metadata = { title: 'Playlist' };
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-export default async function PlaylistPage({ params }: Props) {
+export default async function PlaylistPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const sp = await searchParams;
+  const importadas = Number(Array.isArray(sp.importadas) ? sp.importadas[0] : sp.importadas) || 0;
+  const ignoradas = Number(Array.isArray(sp.ignoradas) ? sp.ignoradas[0] : sp.ignoradas) || 0;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
 
@@ -34,6 +41,11 @@ export default async function PlaylistPage({ params }: Props) {
     <main id="conteudo" className="page page--wide">
       <Window title={playlist.title} icon="music" headingLevel={1}>
         <div className="stack">
+          {importadas > 0 && (
+            <Notice
+              ok={`${importadas} faixas importadas.${ignoradas ? ` ${ignoradas} ficaram de fora (privadas, removidas ou acima do limite).` : ''}`}
+            />
+          )}
           {playlist.description && <p style={{ margin: 0 }}>{playlist.description}</p>}
           <PlaylistPlayer tracks={tracks} title={playlist.title} />
           <p className="muted" style={{ margin: 0, fontSize: '0.8125rem' }}>
@@ -44,7 +56,7 @@ export default async function PlaylistPage({ params }: Props) {
 
       {isOwner && (
         <>
-          <Window title="Adicionar música" icon="plus">
+          <Window title="Adicionar músicas" icon="plus">
             <AddTrackForm playlistId={playlist.id} />
           </Window>
 

@@ -33,3 +33,19 @@ export function embedUrl(current: string, queue: string[] = []) {
 }
 
 export const thumbUrl = (id: string) => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+
+const LIST_RE = /^[A-Za-z0-9_-]{10,64}$/;
+
+/** Extrai o id de uma playlist (youtube.com ou music.youtube.com, parâmetro list=). */
+export function parsePlaylistId(input: string): string | null {
+  const value = input.trim();
+  let url: URL;
+  try {
+    url = new URL(value.startsWith('http') ? value : `https://${value}`);
+  } catch {
+    return LIST_RE.test(value) && /^(PL|OLAK5uy_|UU|FL)/.test(value) ? value : null;
+  }
+  if (!HOSTS.has(url.hostname)) return null;
+  const list = url.searchParams.get('list');
+  return list && LIST_RE.test(list) ? list : null;
+}

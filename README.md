@@ -45,6 +45,12 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
+### Importação de playlists do YouTube
+
+1. No Google Cloud Console (projeto `rede-diario`), ative **YouTube Data API v3** em **APIs e serviços → Biblioteca**.
+2. Em **Credenciais → Criar credenciais → Chave de API**, crie a chave e restrinja-a à **YouTube Data API v3**.
+3. Na Vercel, cadastre a variável `YOUTUBE_API_KEY` (sem `NEXT_PUBLIC_`) e faça o redeploy.
+
 ### 3. Rodar localmente
 
 ```bash

@@ -18,8 +18,15 @@ export function AddTrackForm({ playlistId }: { playlistId: string }) {
       <Notice error={state?.error} ok={state?.ok} />
       <div className="row" style={{ alignItems: 'flex-end' }}>
         <div className="field" style={{ flex: '1 1 320px' }}>
-          <label htmlFor="url">Link do YouTube</label>
-          <input id="url" name="url" type="text" inputMode="url" required placeholder="https://www.youtube.com/watch?v=…" />
+          <label htmlFor="url">Link de uma música ou de uma playlist</label>
+          <input
+            id="url"
+            name="url"
+            type="text"
+            inputMode="url"
+            required
+            placeholder="youtube.com/watch?v=… ou music.youtube.com/playlist?list=…"
+          />
         </div>
         <button type="submit" className="btn btn--primary" disabled={pending}>
           {pending ? 'Adicionando…' : 'Adicionar'}

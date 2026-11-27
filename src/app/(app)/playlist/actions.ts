@@ -3,7 +3,10 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { parseYouTubeId } from '@/lib/youtube';
+import { parsePlaylistId, parseYouTubeId } from '@/lib/youtube';
+import { fetchYouTubePlaylist } from '@/lib/youtubeImport';
+
+const MAX_TRACKS = 200;
 
 export type TrackState = { error?: string; ok?: string } | undefined;
 
@@ -16,9 +19,20 @@ const uuid = (form: FormData, key: string) => {
 };
 
 export async function createPlaylist(form: FormData) {
-  const title = str(form, 'title', 120);
-  if (!title) redirect('/criar/playlist?erro=titulo');
+  let title = str(form, 'title', 120);
+  const importUrl = str(form, 'importUrl', 500);
   const visibility = String(form.get('visibility') ?? 'private');
+
+  // Importação opcional de uma playlist pronta do YouTube / YouTube Music.
+  let imported: Awaited<ReturnType<typeof fetchYouTubePlaylist>> | null = null;
+  if (importUrl) {
+    const listId = parsePlaylistId(importUrl);
+    if (!listId) redirect('/criar/playlist?erro=link');
+    imported = await fetchYouTubePlaylist(listId, MAX_TRACKS);
+    if (!imported.ok) redirect(`/criar/playlist?erro=importacao&detalhe=${encodeURIComponent(imported.error)}`);
+    if (!title) title = imported.title;
+  }
+  if (!title) redirect('/criar/playlist?erro=titulo');
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -34,6 +48,14 @@ export async function createPlaylist(form: FormData) {
     console.error('[createPlaylist]', error?.code, error?.message);
     redirect('/criar/playlist?erro=falhou');
   }
+
+  if (imported?.ok && imported.tracks.length) {
+    const { error: tracksError } = await supabase
+      .from('playlist_tracks')
+      .insert(imported.tracks.map((t, position) => ({ ...t, playlist_id: data.id, position })));
+    if (tracksError) console.error('[createPlaylist/import]', tracksError.code, tracksError.message);
+    redirect(`/playlist/${data.id}?importadas=${imported.tracks.length}&ignoradas=${imported.skipped}`);
+  }
   redirect(`/playlist/${data.id}`);
 }
 
@@ -41,8 +63,15 @@ export async function createPlaylist(form: FormData) {
 export async function addTrack(_prev: TrackState, form: FormData): Promise<TrackState> {
   const playlistId = uuid(form, 'playlistId');
   if (!playlistId) return { error: 'Playlist inválida.' };
-  const videoId = parseYouTubeId(str(form, 'url', 500));
-  if (!videoId) return { error: 'Cole um link do YouTube válido (youtube.com/watch?v=… ou youtu.be/…).' };
+  const input = str(form, 'url', 500);
+  const videoId = parseYouTubeId(input);
+
+  // Link de playlist (sem vídeo específico): importa todas as faixas.
+  if (!videoId) {
+    const listId = parsePlaylistId(input);
+    if (!listId) return { error: 'Cole um link do YouTube válido: de uma música (watch?v=…) ou de uma playlist (playlist?list=…).' };
+    return importIntoPlaylist(playlistId, listId);
+  }
 
   let title = '';
   let author = '';
@@ -85,6 +114,34 @@ export async function addTrack(_prev: TrackState, form: FormData): Promise<Track
   }
   revalidatePath(`/playlist/${playlistId}`);
   return { ok: title ? `“${title}” adicionada.` : 'Faixa adicionada.' };
+}
+
+async function importIntoPlaylist(playlistId: string, listId: string): Promise<TrackState> {
+  const supabase = await createClient();
+  const { data: rows } = await supabase
+    .from('playlist_tracks')
+    .select('position')
+    .eq('playlist_id', playlistId)
+    .order('position', { ascending: false });
+  const existing = rows?.length ?? 0;
+  const room = MAX_TRACKS - existing;
+  if (room <= 0) return { error: 'A playlist já tem 200 faixas, o limite.' };
+
+  const result = await fetchYouTubePlaylist(listId, room);
+  if (!result.ok) return { error: result.error };
+  if (result.tracks.length === 0) return { error: 'Nenhuma faixa disponível nesta playlist.' };
+
+  const start = (rows?.[0]?.position ?? -1) + 1;
+  const { error } = await supabase
+    .from('playlist_tracks')
+    .insert(result.tracks.map((t, i) => ({ ...t, playlist_id: playlistId, position: start + i })));
+  if (error) {
+    console.error('[importIntoPlaylist]', error.code, error.message);
+    return { error: 'Não foi possível importar as faixas.' };
+  }
+  revalidatePath(`/playlist/${playlistId}`);
+  const extra = result.skipped ? ` ${result.skipped} ficaram de fora (privadas, removidas ou acima do limite).` : '';
+  return { ok: `${result.tracks.length} faixas de “${result.title}” adicionadas.${extra}` };
 }
 
 export async function moveTrack(form: FormData) {
