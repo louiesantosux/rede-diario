@@ -41,6 +41,10 @@
 html {
   font-size: calc(100% * var(--font-scale));
   scrollbar-color: var(--border) transparent;
+  /* Cor que o Safari mostra atrás das barras translúcidas e no "puxar além" da rolagem */
+  background-color: var(--bg);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ---------- Papel de parede: feixes de luz e brilho difuso ---------- */
@@ -199,7 +203,7 @@ h3 {
 /* ---------- Layout ---------- */
 .page {
   width: min(100% - 32px, 760px);
-  margin: var(--space-5) auto calc(var(--taskbar-h) + var(--space-5));
+  margin: calc(var(--space-5) + var(--safe-top)) auto calc(var(--taskbar-h) + var(--safe-bottom) + var(--space-5));
   display: grid;
   gap: var(--space-4);
 }
@@ -413,7 +417,9 @@ legend {
 .taskbar {
   position: fixed;
   inset: auto 0 0 0;
-  height: var(--taskbar-h);
+  /* A barra desce até a borda da tela; o conteúdo fica acima da área segura */
+  height: calc(var(--taskbar-h) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
   display: flex;
   justify-content: center;
   z-index: 50;
@@ -439,8 +445,9 @@ legend {
 .taskbar li {
   display: flex;
   justify-content: center;
+  min-width: 0;
   height: 100%;
-  padding: 6px 0;
+  padding: 6px 2px;
 }
 .taskbar__item {
   flex: 1;
@@ -451,10 +458,22 @@ legend {
   gap: 1px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
+  min-width: 0;
+  padding: 0 2px;
   color: var(--titlebar-text);
   text-decoration: none;
   font-size: 0.75rem;
   font-weight: 600;
+}
+.taskbar__item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.25;
+  /* Fontes largas (pixel, máquina) não quebram o rótulo em duas linhas */
+  font-family: 'Segoe UI', 'Trebuchet MS', system-ui, -apple-system, sans-serif;
+  letter-spacing: 0;
 }
 .taskbar__item svg {
   width: 22px;
@@ -466,12 +485,38 @@ legend {
   box-shadow: 0 0 10px var(--glow);
 }
 .taskbar__item[aria-current='page'] {
-  color: var(--text);
-  border-color: var(--border);
+  /* Selecionado acompanha o tema: tom da cor de destaque, com contorno nela */
+  color: var(--titlebar-text);
+  border-color: var(--accent);
   background:
-    linear-gradient(180deg, var(--glass-edge) 0 46%, transparent 54%),
-    var(--surface-alt);
-  box-shadow: inset 0 1px 0 var(--glass-edge);
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-edge) 70%, transparent) 0 46%, transparent 54%),
+    color-mix(in srgb, var(--accent) 24%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge),
+    0 0 10px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.taskbar__item[aria-current='page'] svg {
+  color: var(--accent);
+}
+[data-theme='alto-contraste'] .taskbar__item[aria-current='page'] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+[data-theme='alto-contraste'] .taskbar__item[aria-current='page'] svg {
+  color: var(--on-accent);
+}
+@media (max-width: 420px) {
+  .taskbar ul {
+    grid-template-columns: 1fr 1fr 64px 1fr 1fr;
+    gap: 2px;
+  }
+  .taskbar__item {
+    font-size: 0.6875rem;
+  }
+  .taskbar__item svg {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 /* Orbe: esfera de vidro com reflexo no topo e brilho na base */
@@ -1884,7 +1929,7 @@ a.start-menu__item:focus-visible {
 .miniplayer {
   position: fixed;
   right: 12px;
-  bottom: calc(var(--taskbar-h) + 12px);
+  bottom: calc(var(--taskbar-h) + var(--safe-bottom, 0px) + 12px);
   z-index: 60;
   width: min(380px, 100vw - 24px);
   padding: 6px;
@@ -2701,7 +2746,7 @@ a.start-menu__item:focus-visible {
 }
 .save-bar {
   position: sticky;
-  bottom: calc(var(--taskbar-h, 64px) + 8px);
+  bottom: calc(var(--taskbar-h, 64px) + var(--safe-bottom, 0px) + 8px);
   z-index: 5;
   display: flex;
   flex-wrap: wrap;
@@ -3114,7 +3159,7 @@ a.start-menu__item:focus-visible {
 .miniplayer--tl,
 .miniplayer--tr {
   bottom: auto;
-  top: 12px;
+  top: calc(var(--safe-top, 0px) + 12px);
 }
 .miniplayer--tl {
   right: auto;
@@ -3298,7 +3343,7 @@ a.start-menu__item:focus-visible {
     top: auto !important;
     left: 8px !important;
     right: 8px;
-    bottom: calc(var(--taskbar-h) + 8px);
+    bottom: calc(var(--taskbar-h) + var(--safe-bottom, 0px) + 8px);
     width: auto;
   }
 }
@@ -3628,7 +3673,7 @@ a.start-menu__item:focus-visible {
 /* Prévia da aparência acima dos controles, presa no topo enquanto se ajusta */
 .space-preview-sticky {
   position: sticky;
-  top: 8px;
+  top: calc(var(--safe-top, 0px) + 8px);
   z-index: 3;
   padding: 8px;
   border-radius: var(--radius-sm);

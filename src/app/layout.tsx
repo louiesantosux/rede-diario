@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Atkinson_Hyperlegible } from 'next/font/google';
 import { APP_NAME } from '@/lib/config';
 import { PREFS_BOOT_SCRIPT } from '@/lib/prefs';
+import { ThemeColorSync } from '@/components/ThemeColorSync';
 import './themes.css';
 import './globals.css';
 
@@ -17,9 +18,12 @@ export const metadata: Metadata = {
   description: 'Seu diário, suas coleções, seu ritmo. Uma rede social calma e feita por pessoas.',
 };
 
+// viewport-fit=cover: o conteúdo passa por trás da barra de status e da barra do
+// Safari (que ficam translúcidas); as margens seguras são tratadas no CSS.
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -33,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Pular para o conteúdo
         </a>
         {children}
+        <ThemeColorSync />
       </body>
     </html>
   );
