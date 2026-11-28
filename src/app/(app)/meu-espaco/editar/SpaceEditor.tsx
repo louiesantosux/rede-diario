@@ -348,24 +348,6 @@ export function SpaceEditor(props: Props) {
         </p>
       </Window>
 
-      <Window title="Módulos" icon="list">
-        <p style={{ marginTop: 0 }}>
-          Escolha o que aparece no espaço, para quem e em que ordem. Arraste pela alça{' '}
-          <span aria-hidden="true">⠿</span> ou use o teclado.
-        </p>
-        <ModuleList
-          modules={modules}
-          onChange={(m) => {
-            setModules(m);
-            setDirty(true);
-          }}
-        />
-        <p className="muted" style={{ margin: '12px 0 0', fontSize: '0.875rem' }}>
-          Wikis, posts, moodboards e playlists continuam respeitando a visibilidade de cada um: um módulo público não
-          abre um conteúdo privado.
-        </p>
-      </Window>
-
       <Window title="Aparência" icon="star">
         <div className="stack">
             <fieldset className="choice-group">
@@ -590,6 +572,24 @@ export function SpaceEditor(props: Props) {
               )}
             </div>
         </div>
+      </Window>
+
+      <Window title="Módulos" icon="list">
+        <p style={{ marginTop: 0 }}>
+          Escolha o que aparece no espaço, para quem e em que ordem. Arraste pela alça{' '}
+          <span aria-hidden="true">⠿</span> ou use o teclado.
+        </p>
+        <ModuleList
+          modules={modules}
+          onChange={(m) => {
+            setModules(m);
+            setDirty(true);
+          }}
+        />
+        <p className="muted" style={{ margin: '12px 0 0', fontSize: '0.875rem' }}>
+          Wikis, posts, moodboards e playlists continuam respeitando a visibilidade de cada um: um módulo público não
+          abre um conteúdo privado.
+        </p>
       </Window>
 
       <div className="save-bar">
