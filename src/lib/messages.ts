@@ -24,6 +24,7 @@ export const NOTICES: Record<string, string> = {
   'link-enviado': 'Se houver uma conta com este e-mail, enviamos um link para redefinir a senha. Ele vale por 1 hora.',
   'senha-alterada': 'Senha alterada. As sessões nos outros dispositivos foram encerradas.',
   'saiu': 'Você saiu da sua conta.',
+  'sessao-expirada': 'Sua sessão terminou. Entre de novo para continuar.',
   'post-publicado': 'Post publicado.',
   'post-privado': 'Guardado no seu diário. Só você pode ver.',
   'post-excluido': 'Post apagado. As imagens dele continuam na sua galeria.',
