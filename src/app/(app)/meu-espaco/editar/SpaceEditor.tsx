@@ -29,7 +29,7 @@ import {
 } from '@/lib/space';
 import { BG_MUSIC_MAX_VOLUME } from '@/lib/pageSettings';
 import { saveSpace, saveSpaceMedia, type FormState, type SpaceMediaInput } from '../actions';
-import { BACKDROPS, ORNAMENTS, ORNAMENT_LABEL, SPACE_THEMES, backdropUrl, bgLayers, spaceChecks } from '@/lib/space';
+import { BACKDROPS, ORNAMENTS, ORNAMENT_LABEL, SPACE_THEMES, backdropUrl, bgLayers, randomSpaceTheme, spaceChecks } from '@/lib/space';
 import { ModuleList } from './ModuleList';
 
 type Props = {
@@ -88,6 +88,13 @@ export function SpaceEditor(props: Props) {
 
   // Foto e fundo são salvos na hora em que são escolhidos.
   const [mediaStatus, setMediaStatus] = useState('');
+  // Gerar aleatoriamente: guarda a aparência anterior para poder desfazer.
+  const [beforeRandom, setBeforeRandom] = useState<SpaceTheme | null>(null);
+  const randomize = () => {
+    setBeforeRandom((prev) => prev ?? theme);
+    setTheme((t) => ({ ...t, ...randomSpaceTheme() }));
+    setDirty(true);
+  };
   const persistMedia = async (input: SpaceMediaInput, done: string) => {
     setMediaStatus('Salvando…');
     const res = await saveSpaceMedia(input);
@@ -350,6 +357,28 @@ export function SpaceEditor(props: Props) {
 
       <Window title="Aparência" icon="star">
         <div className="stack">
+            <div className="random-theme" role="group" aria-label="Gerar aparência aleatória">
+              <button type="button" className="btn btn--primary" onClick={randomize}>
+                <span aria-hidden="true">🎲</span> Gerar aleatoriamente
+              </button>
+              {beforeRandom && (
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  onClick={() => {
+                    setTheme(beforeRandom);
+                    setBeforeRandom(null);
+                  }}
+                >
+                  Voltar ao que estava
+                </button>
+              )}
+              <span className="muted" style={{ fontSize: '0.8125rem' }}>
+                Sorteia cores combinando, padrão, fonte, janelas, enfeites e fundo. Clique de novo para outra opção; o
+                contraste do texto fica sempre legível.
+              </span>
+            </div>
+
             <fieldset className="choice-group">
               <legend>Temas prontos</legend>
               <ul className="theme-gallery">
@@ -363,6 +392,7 @@ export function SpaceEditor(props: Props) {
                         aria-pressed={activePreset === p.id}
                         onClick={() => {
                           setTheme((t) => ({ ...t, ...p.theme }));
+                          setBeforeRandom(null);
                           // O tema traz o próprio fundo: a imagem enviada sai (volta a valer ao escolhê-la de novo).
                           if (bg) {
                             setBg(null);

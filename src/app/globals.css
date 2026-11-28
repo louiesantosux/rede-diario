@@ -3646,3 +3646,18 @@ a.start-menu__item:focus-visible {
     padding: 0;
   }
 }
+
+/* Gerar aparência aleatória */
+.random-theme {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+}
+.random-theme .muted {
+  flex: 1 1 220px;
+}

@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { contrastRatio } from './contrast';
 import { isYouTubeId } from './youtube';
-import { DEFAULT_THEME, sanitizeTheme, themeStyle, type WikiTheme } from './wikiTheme';
+import { DEFAULT_THEME, FONTS, PATTERNS, sanitizeTheme, themeStyle, type WikiTheme } from './wikiTheme';
 
 /* ------------------------------------------------------------------ */
 /* Módulos                                                             */
@@ -228,7 +228,7 @@ export function spaceClass(t: SpaceTheme, hasUserBg: boolean) {
 /* Temas prontos (inspirados em perfis dos anos 2000 e skins de sistema) */
 /* ------------------------------------------------------------------ */
 
-type ThemeLook = Omit<SpaceTheme, 'bgFit' | 'bgOpacity' | 'bgMusic'>;
+export type ThemeLook = Omit<SpaceTheme, 'bgFit' | 'bgOpacity' | 'bgMusic'>;
 export type SpaceThemePreset = { id: string; label: string; hint: string; theme: ThemeLook };
 
 export const SPACE_THEMES: SpaceThemePreset[] = [
@@ -340,3 +340,64 @@ export const BIO_MAX = 300;
 export const NAME_MAX = 50;
 export const MOOD_MAX = 80;
 export const NOTE_MAX = 500;
+
+/* ------------------------------------------------------------------ */
+/* Gerar aleatoriamente                                                */
+/* ------------------------------------------------------------------ */
+
+function hslHex(h: number, s: number, l: number) {
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(Math.min(1, Math.max(0, c)) * 255)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+/** Ajusta a luminosidade até atingir o contraste mínimo com o fundo. */
+function withContrast(h: number, s: number, l: number, against: string, darker: boolean, min = 4.5) {
+  let light = l;
+  let color = hslHex(h, s, light);
+  for (let i = 0; i < 40 && contrastRatio(color, against) < min; i++) {
+    light = Math.min(0.98, Math.max(0.02, light + (darker ? -0.025 : 0.025)));
+    color = hslHex(h, s, light);
+  }
+  return color;
+}
+
+/**
+ * Combinação aleatória, mas harmoniosa: uma cor base, uma cor de destaque em
+ * relação clássica (complementar, análoga, tríade…), e texto e links sempre
+ * com contraste de pelo menos 4,5:1. Sem IA: só sorteio com regras de cor.
+ */
+export function randomSpaceTheme(rand: () => number = Math.random): ThemeLook {
+  const pick = <T,>(list: readonly T[]) => list[Math.floor(rand() * list.length)];
+  const h = rand() * 360;
+  const dark = rand() < 0.5;
+  const accentHue = (h + pick([0, 30, 150, 180, 210, 330])) % 360;
+
+  const bg = dark ? hslHex(h, 0.35 + rand() * 0.45, 0.05 + rand() * 0.12) : hslHex(h, 0.4 + rand() * 0.5, 0.72 + rand() * 0.16);
+  const surface = dark ? hslHex(h, 0.2 + rand() * 0.35, 0.08 + rand() * 0.12) : hslHex(h, 0.3 + rand() * 0.5, 0.92 + rand() * 0.06);
+  const text = withContrast(h, 0.25, dark ? 0.88 : 0.15, surface, !dark, 7);
+  const accent = withContrast(accentHue, 0.65 + rand() * 0.3, dark ? 0.62 : 0.4, surface, !dark);
+  const pattern = pick(PATTERNS.filter((p) => p !== 'feixes'));
+  const backdropChance = rand();
+
+  return {
+    bg,
+    surface,
+    text,
+    accent,
+    linkColor: null,
+    pattern,
+    patternColor: rand() < 0.6 ? hslHex(pick([h, accentHue]), 0.5 + rand() * 0.4, dark ? 0.22 + rand() * 0.15 : 0.55 + rand() * 0.2) : null,
+    font: pick(FONTS),
+    window: pick(WINDOW_STYLES),
+    ornament: rand() < 0.35 ? 'nenhum' : pick(ORNAMENTS.filter((o) => o !== 'nenhum')),
+    corners: pick(CORNERS),
+    backdrop: backdropChance < 0.35 ? pick(BACKDROPS).id : null,
+  };
+}
