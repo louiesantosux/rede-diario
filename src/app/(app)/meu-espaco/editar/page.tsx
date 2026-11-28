@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { getMediaViews } from '@/lib/media';
 import { sanitizeDoc } from '@/lib/richtext';
-import { sanitizeModules, sanitizeSpaceTheme } from '@/lib/space';
+import { sanitizeModules, sanitizeSpaceTheme, siteFromSpace } from '@/lib/space';
 import Link from 'next/link';
 import { Window } from '@/components/Window';
 import { SiteAppearance } from '@/components/space/SiteAppearance';
@@ -60,12 +60,21 @@ export default async function EditarEspacoPage({ searchParams }: Props) {
   }
 
   if (tab === 'site') {
-    const { data: prefs } = await supabase.from('profiles').select('theme, a11y_prefs').eq('id', userId).single();
+    const [{ data: prefs }, { data: sp2 }] = await Promise.all([
+      supabase.from('profiles').select('theme, a11y_prefs').eq('id', userId).single(),
+      supabase.from('spaces').select('theme').eq('owner_id', userId).maybeSingle(),
+    ]);
+    const spaceSite = siteFromSpace(sanitizeSpaceTheme(sp2?.theme));
     return (
       <main id="conteudo" className="page">
         <EditTabs current={tab} />
         <Window title="Aparência do site" icon="star" headingLevel={1}>
-          <SiteAppearance userId={userId} savedUi={prefs?.theme ?? null} savedA11y={prefs?.a11y_prefs ?? null} />
+          <SiteAppearance
+            userId={userId}
+            savedUi={prefs?.theme ?? null}
+            savedA11y={prefs?.a11y_prefs ?? null}
+            spaceSite={spaceSite}
+          />
         </Window>
       </main>
     );

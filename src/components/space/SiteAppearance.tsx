@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ColorPicker } from '@/components/ColorPicker';
+import { BACKDROPS, backdropUrl } from '@/lib/space';
 import { contrastLevel, contrastRatio } from '@/lib/contrast';
 import { DEFAULT_PREFS, PREFS_KEY, THEME_OPTIONS, applyPrefs, type A11yPrefs, type ThemeId } from '@/lib/prefs';
 import {
@@ -19,7 +20,8 @@ import {
   type UiPrefs,
 } from '@/lib/uiPrefs';
 
-type Props = { userId: string; savedUi: unknown; savedA11y: unknown };
+type SpaceSite = { base: ThemeId; ui: Partial<UiPrefs> } | null;
+type Props = { userId: string; savedUi: unknown; savedA11y: unknown; spaceSite?: SpaceSite };
 
 const readLocal = (key: string) => {
   try {
@@ -33,7 +35,7 @@ const readLocal = (key: string) => {
  * Cores, papel de parede, fonte e cantos da interface inteira, só para esta pessoa.
  * As mudanças aparecem na hora; salvar leva a escolha para todos os dispositivos.
  */
-export function SiteAppearance({ userId, savedUi, savedA11y }: Props) {
+export function SiteAppearance({ userId, savedUi, savedA11y, spaceSite = null }: Props) {
   const [ui, setUi] = useState<UiPrefs>(DEFAULT_UI);
   const [a11y, setA11y] = useState<A11yPrefs>(DEFAULT_PREFS);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -57,9 +59,18 @@ export function SiteAppearance({ userId, savedUi, savedA11y }: Props) {
     applyUiPrefs(next);
     setStatus('idle');
   };
-  const set = <K extends keyof UiPrefs>(key: K, value: UiPrefs[K]) => preview({ ...ui, [key]: value });
+  // Mudar algo à mão desliga a sincronização com o Meu espaço (senão o próximo salvamento do espaço desfaria).
+  const set = <K extends keyof UiPrefs>(key: K, value: UiPrefs[K]) => preview({ ...ui, [key]: value, syncSpace: false });
 
-  const setBase = (theme: ThemeId) => {
+  const toggleSync = (on: boolean) => {
+    if (on && spaceSite) {
+      const next = { ...ui, ...spaceSite.ui, syncSpace: true };
+      preview(next);
+      if (a11y.theme !== 'alto-contraste') setBase(spaceSite.base);
+    } else preview({ ...ui, syncSpace: on });
+  };
+
+  function setBase(theme: ThemeId) {
     const next = { ...a11y, theme };
     setA11y(next);
     try {
@@ -69,7 +80,7 @@ export function SiteAppearance({ userId, savedUi, savedA11y }: Props) {
     }
     applyPrefs(next); // também reaplica as cores escolhidas aqui
     setStatus('idle');
-  };
+  }
 
   const save = async () => {
     setStatus('saving');
@@ -83,7 +94,7 @@ export function SiteAppearance({ userId, savedUi, savedA11y }: Props) {
     router.push('/meu-espaco?aviso=aparencia-salva');
   };
 
-  const reset = () => preview({ ...DEFAULT_UI });
+  const reset = () => preview({ ...DEFAULT_UI, syncSpace: false });
 
   const highContrast = a11y.theme === 'alto-contraste';
   const accentRatio = ui.accent ? contrastRatio(ui.accent, '#ffffff') : null;
@@ -97,13 +108,28 @@ export function SiteAppearance({ userId, savedUi, savedA11y }: Props) {
       }}
     >
       <p className="muted" style={{ margin: 0 }}>
-        Muda as cores, a fonte e os cantos de todas as telas, só para você. Aparece na hora; salve para levar a
-        outros dispositivos. Temas prontos chegam em breve.
+        Muda as cores, o fundo, a fonte e os cantos de todas as telas, só para você. Aparece na hora; salve para levar
+        a outros dispositivos.
       </p>
+
+      <label className="sync-toggle">
+        <input type="checkbox" checked={ui.syncSpace} onChange={(e) => toggleSync(e.target.checked)} />
+        <span>
+          <strong>Seguir o tema do meu espaço</strong>
+          <span className="muted">
+            {ui.syncSpace
+              ? 'Ligado: ao salvar o espaço (inclusive um tema sorteado), o site inteiro ganha as mesmas cores, fundo, fonte e cantos. Mudar algo abaixo desliga.'
+              : 'Desligado: o site mantém a aparência escolhida aqui, mesmo quando você troca o tema do espaço.'}
+          </span>
+        </span>
+      </label>
 
       <div className="field" style={{ maxWidth: 320 }}>
         <label htmlFor="ui-base">Tema base</label>
-        <select id="ui-base" value={a11y.theme} onChange={(e) => setBase(e.target.value as ThemeId)}>
+        <select id="ui-base" value={a11y.theme} onChange={(e) => {
+            setBase(e.target.value as ThemeId);
+            if (ui.syncSpace) preview({ ...ui, syncSpace: false });
+          }}>
           {THEME_OPTIONS.map((t) => (
             <option key={t.id} value={t.id}>
               {t.label}
@@ -170,6 +196,34 @@ export function SiteAppearance({ userId, savedUi, savedA11y }: Props) {
             />
           ))}
           <ColorPicker compact label="Outra cor de papel de parede" value={ui.wallpaper ?? '#cfe3f5'} onChange={(hex) => set('wallpaper', hex)} />
+        </div>
+      </fieldset>
+
+      <fieldset className="choice-group">
+        <legend>Fundo do site</legend>
+        <div className="backdrop-row">
+          <button
+            type="button"
+            className="backdrop-chip backdrop-chip--none"
+            aria-pressed={!ui.backdrop}
+            onClick={() => set('backdrop', null)}
+          >
+            Nenhum
+          </button>
+          {BACKDROPS.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              className="backdrop-chip"
+              aria-pressed={ui.backdrop === b.id}
+              title={b.label}
+              onClick={() => set('backdrop', b.id)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={backdropUrl(b.id)} alt="" loading="lazy" />
+              <span className="sr-only">{b.label}</span>
+            </button>
+          ))}
         </div>
       </fieldset>
 

@@ -3,7 +3,7 @@
 // Os recursos de acessibilidade têm prioridade: com "Alto contraste" as cores
 // não são trocadas, e com a fonte Atkinson a fonte escolhida aqui é ignorada.
 
-export type UiFont = 'padrao' | 'serifa' | 'arredondada' | 'retro' | 'maquina';
+export type UiFont = 'padrao' | 'serifa' | 'arredondada' | 'retro' | 'maquina' | 'pixel';
 export type UiCorners = 'padrao' | 'retos' | 'redondos';
 
 export type UiPrefs = {
@@ -11,10 +11,21 @@ export type UiPrefs = {
   wallpaper: string | null;
   font: UiFont;
   corners: UiCorners;
+  /** Fundo pronto (ilustração de /public/fundos) atrás de todas as telas. */
+  backdrop: string | null;
+  /** Seguir automaticamente o tema do Meu espaço. */
+  syncSpace: boolean;
 };
 
 export const UI_PREFS_KEY = 'ui-prefs';
-export const DEFAULT_UI: UiPrefs = { accent: null, wallpaper: null, font: 'padrao', corners: 'padrao' };
+export const DEFAULT_UI: UiPrefs = {
+  accent: null,
+  wallpaper: null,
+  font: 'padrao',
+  corners: 'padrao',
+  backdrop: null,
+  syncSpace: true,
+};
 
 export const UI_FONTS: { id: UiFont; label: string; stack: string }[] = [
   { id: 'padrao', label: 'Padrão (Segoe, Windows 7)', stack: '' },
@@ -22,6 +33,7 @@ export const UI_FONTS: { id: UiFont; label: string; stack: string }[] = [
   { id: 'arredondada', label: 'Arredondada (Y2K)', stack: "'Trebuchet MS', 'Arial Rounded MT Bold', 'Varela Round', system-ui, sans-serif" },
   { id: 'retro', label: 'Retrô (Verdana, anos 2000)', stack: 'Verdana, Tahoma, Geneva, sans-serif' },
   { id: 'maquina', label: 'Máquina de escrever', stack: "'Courier New', Courier, monospace" },
+  { id: 'pixel', label: 'Pixel / terminal', stack: "'Lucida Console', 'Courier New', ui-monospace, monospace" },
 ];
 
 export const UI_CORNERS: { id: UiCorners; label: string }[] = [
@@ -61,6 +73,8 @@ export function sanitizeUiPrefs(raw: unknown): UiPrefs {
     wallpaper: typeof r.wallpaper === 'string' && HEX.test(r.wallpaper) ? r.wallpaper.toLowerCase() : null,
     font: UI_FONTS.some((f) => f.id === r.font) ? (r.font as UiFont) : 'padrao',
     corners: UI_CORNERS.some((c) => c.id === r.corners) ? (r.corners as UiCorners) : 'padrao',
+    backdrop: typeof r.backdrop === 'string' && /^[a-z0-9-]{2,40}$/.test(r.backdrop) ? r.backdrop : null,
+    syncSpace: r.syncSpace !== false,
   };
 }
 
@@ -76,8 +90,9 @@ export function applyUiPrefs(raw: unknown): void {
   let hex = /^#[0-9a-f]{6}$/i;
   let props = [
     '--accent', '--accent-deep', '--on-accent', '--glow', '--titlebar-from', '--titlebar-to',
-    '--bg', '--bg2', '--wall-glow', '--font-ui', '--font-display', '--radius', '--radius-sm',
+    '--bg', '--bg2', '--wall-glow', '--font-ui', '--font-display', '--radius', '--radius-sm', '--site-backdrop',
   ];
+  delete root.dataset.uiBackdrop;
   for (let i = 0; i < props.length; i++) st.removeProperty(props[i]);
 
   function lum(h: string) {
@@ -116,11 +131,17 @@ export function applyUiPrefs(raw: unknown): void {
     arredondada: "'Trebuchet MS', 'Arial Rounded MT Bold', 'Varela Round', system-ui, sans-serif",
     retro: 'Verdana, Tahoma, Geneva, sans-serif',
     maquina: "'Courier New', Courier, monospace",
+    pixel: "'Lucida Console', 'Courier New', ui-monospace, monospace",
   };
   let font = typeof p.font === 'string' ? fonts[p.font] : undefined;
   if (font && root.dataset.font !== 'atkinson') {
     st.setProperty('--font-ui', font);
     st.setProperty('--font-display', font);
+  }
+
+  if (!highContrast && typeof p.backdrop === 'string' && /^[a-z0-9-]{2,40}$/.test(p.backdrop)) {
+    st.setProperty('--site-backdrop', 'url("/fundos/' + p.backdrop + '.svg")');
+    root.dataset.uiBackdrop = 'true';
   }
 
   if (p.corners === 'retos') {

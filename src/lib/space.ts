@@ -401,3 +401,39 @@ export function randomSpaceTheme(rand: () => number = Math.random): ThemeLook {
     backdrop: backdropChance < 0.35 ? pick(BACKDROPS).id : null,
   };
 }
+
+/* ------------------------------------------------------------------ */
+/* Sincronizar com a aparência do site                                 */
+/* ------------------------------------------------------------------ */
+
+const SPACE_TO_UI_FONT: Record<SpaceTheme['font'], 'padrao' | 'serifa' | 'arredondada' | 'retro' | 'maquina' | 'pixel'> = {
+  sistema: 'padrao',
+  serifa: 'serifa',
+  arredondada: 'arredondada',
+  maquina: 'maquina',
+  verdana: 'retro',
+  pixel: 'pixel',
+};
+
+/**
+ * Converte o tema do espaço na aparência do site: tema base claro ou escuro
+ * conforme o fundo, destaque legível sobre as janelas do site, papel de parede,
+ * fundo pronto, fonte e cantos.
+ */
+export function siteFromSpace(t: SpaceTheme) {
+  const dark = contrastRatio(t.bg, '#000000') < contrastRatio(t.bg, '#ffffff');
+  const siteSurface = dark ? '#13212f' : '#fbfdff';
+  const candidates = [t.accent, t.linkColor, t.text].filter((c): c is string => Boolean(c));
+  const accent = candidates.reduce((best, c) => (contrastRatio(c, siteSurface) > contrastRatio(best, siteSurface) && contrastRatio(best, siteSurface) < 3 ? c : best), candidates[0]);
+  return {
+    base: (dark ? 'aero-escuro' : 'aero-claro') as 'aero-escuro' | 'aero-claro',
+    ui: {
+      accent,
+      wallpaper: t.bg,
+      backdrop: t.backdrop,
+      font: SPACE_TO_UI_FONT[t.font],
+      corners: (t.corners === 'suaves' ? 'padrao' : t.corners) as 'padrao' | 'retos' | 'redondos',
+      syncSpace: true,
+    },
+  };
+}

@@ -3661,3 +3661,41 @@ a.start-menu__item:focus-visible {
 .random-theme .muted {
   flex: 1 1 220px;
 }
+
+/* Fundo pronto atrás de todas as telas (Aparência do site / tema do Meu espaço) */
+[data-ui-backdrop='true'] body {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--bg) 35%, transparent), color-mix(in srgb, var(--bg) 35%, transparent)),
+    var(--site-backdrop);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+@media (max-width: 720px) {
+  [data-ui-backdrop='true'] body {
+    background-attachment: scroll;
+  }
+}
+.sync-toggle {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  cursor: pointer;
+}
+.sync-toggle input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex: none;
+}
+.sync-toggle > span {
+  display: grid;
+  gap: 2px;
+}
+.sync-toggle .muted {
+  font-size: 0.8125rem;
+}

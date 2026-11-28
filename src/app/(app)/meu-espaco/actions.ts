@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { docMediaIds, docText, MAX_INLINE_IMAGES, sanitizeDoc } from '@/lib/richtext';
 import { parseYouTubeId } from '@/lib/youtube';
+import { sanitizeUiPrefs } from '@/lib/uiPrefs';
 import {
   BG_FITS,
   clampOpacity,
@@ -14,6 +15,7 @@ import {
   NOTE_MAX,
   sanitizeModules,
   sanitizeSpaceTheme,
+  siteFromSpace,
   type SpaceTheme,
 } from '@/lib/space';
 
@@ -52,6 +54,26 @@ async function videoTitle(videoId: string): Promise<{ title: string } | { error:
     /* usa o título padrão */
   }
   return { title: 'Música de fundo' };
+}
+
+type Supa = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Leva o tema do espaço para a aparência do site (cores, fundo, fonte, cantos
+ * e tema claro/escuro), a menos que a pessoa tenha desligado a sincronização
+ * em Aparência do site. O Alto contraste, de acessibilidade, nunca é trocado.
+ */
+async function syncSiteWithSpace(supabase: Supa, userId: string, theme: SpaceTheme) {
+  const { data: prof } = await supabase.from('profiles').select('theme, a11y_prefs').eq('id', userId).single();
+  const ui = sanitizeUiPrefs(prof?.theme);
+  if (!ui.syncSpace) return;
+  const { base, ui: next } = siteFromSpace(theme);
+  const a11y = (prof?.a11y_prefs && typeof prof.a11y_prefs === 'object' ? prof.a11y_prefs : {}) as Record<string, unknown>;
+  const patch: Record<string, unknown> = { theme: { ...ui, ...next } };
+  if (a11y.theme !== 'alto-contraste') patch.a11y_prefs = { ...a11y, theme: base };
+  const { error } = await supabase.from('profiles').update(patch).eq('id', userId);
+  if (error) console.error('[syncSiteWithSpace]', error.code, error.message);
+  revalidatePath('/', 'layout');
 }
 
 export async function saveSpace(_prev: FormState, form: FormData): Promise<FormState> {
@@ -126,6 +148,7 @@ export async function saveSpace(_prev: FormState, form: FormData): Promise<FormS
     };
   }
 
+  await syncSiteWithSpace(supabase, userId, theme);
   revalidatePath('/meu-espaco');
   revalidatePath('/u/[username]', 'page');
   // Volta para Meu espaço (visualização), já mostrando o resultado.
@@ -153,6 +176,7 @@ export async function saveSpaceMedia(input: SpaceMediaInput): Promise<{ ok: bool
 
   const idOrNull = (v: unknown) => (typeof v === 'string' && UUID_RE.test(v) ? v : null);
   const patch: Record<string, unknown> = {};
+  let syncTheme: SpaceTheme | null = null;
   if ('avatar' in input) patch.avatar_media_id = idOrNull(input.avatar);
   if ('bg' in input) patch.bg_media_id = idOrNull(input.bg);
 
@@ -165,6 +189,7 @@ export async function saveSpaceMedia(input: SpaceMediaInput): Promise<{ ok: bool
     if ('bgOpacity' in input) theme.bgOpacity = clampOpacity(input.bgOpacity);
     if ('backdrop' in input) theme.backdrop = sanitizeSpaceTheme({ backdrop: input.backdrop }).backdrop;
     patch.theme = theme;
+    syncTheme = 'backdrop' in input ? theme : null;
   }
   if (Object.keys(patch).length === 0) return { ok: true };
 
@@ -173,6 +198,7 @@ export async function saveSpaceMedia(input: SpaceMediaInput): Promise<{ ok: bool
     console.error('[saveSpaceMedia]', error.code, error.message);
     return { ok: false, error: 'Não foi possível salvar a imagem. Tente de novo.' };
   }
+  if (syncTheme) await syncSiteWithSpace(supabase, userId, syncTheme);
   revalidatePath('/meu-espaco');
   revalidatePath('/u/[username]', 'page');
   return { ok: true };
