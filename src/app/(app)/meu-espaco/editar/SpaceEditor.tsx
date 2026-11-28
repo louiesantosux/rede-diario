@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useActionState, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Window } from '@/components/Window';
 import { Notice } from '@/components/Notice';
@@ -133,10 +132,6 @@ export function SpaceEditor(props: Props) {
     <form action={submit} className="stack" onChange={() => setDirty(true)}>
       <Window title="Editar meu espaço" icon="user" headingLevel={1}>
         <div className="stack">
-          <div className="row" style={{ justifyContent: 'space-between' }}>
-            <Link href="/meu-espaco">← Voltar para Meu espaço</Link>
-            <Link href={`/u/${state?.username ?? props.username}`}>Ver como fica</Link>
-          </div>
 
           <div className="row" style={{ alignItems: 'flex-end' }}>
             <div className="field" style={{ flex: '1 1 200px' }}>

@@ -218,7 +218,7 @@ export async function deleteWiki(form: FormData) {
   if (!wiki || str(form, 'confirm', 120) !== wiki.title) redirect(`/wiki/${wikiId}/ajustes?erro=confirmacao`);
 
   await supabase.from('wikis').delete().eq('id', wikiId);
-  redirect('/meu-espaco?aviso=wiki-excluida');
+  redirect('/meu-espaco/editar?aba=conteudos&aviso=wiki-excluida');
 }
 
 /** Reordena as páginas da wiki (arrastar e soltar). Recebe os ids na nova ordem. */

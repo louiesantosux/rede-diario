@@ -250,7 +250,7 @@ export async function deletePlaylist(form: FormData) {
   if (!id) redirect('/meu-espaco');
   const supabase = await createClient();
   await supabase.from('playlists').delete().eq('id', id);
-  redirect('/meu-espaco?aviso=playlist-excluida');
+  redirect('/meu-espaco/editar?aba=conteudos&aviso=playlist-excluida');
 }
 
 /** Capa escolhida pelo dono (imagem da galeria). null volta à capa automática. Salva na hora. */

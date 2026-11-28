@@ -24,5 +24,5 @@ export async function deleteMoodboard(form: FormData) {
   if (!UUID_RE.test(id)) redirect('/meu-espaco');
   const supabase = await createClient();
   await supabase.from('moodboards').delete().eq('id', id);
-  redirect('/meu-espaco?aviso=moodboard-excluido');
+  redirect('/meu-espaco/editar?aba=conteudos&aviso=moodboard-excluido');
 }

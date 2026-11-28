@@ -82,5 +82,5 @@ export async function finalizeImages(_prev: FinalizeState, form: FormData): Prom
     redirect(`/moodboard/${data.id}`);
   }
 
-  redirect('/meu-espaco?aviso=imagens-salvas');
+  redirect('/meu-espaco/editar?aba=conteudos&aviso=imagens-salvas');
 }

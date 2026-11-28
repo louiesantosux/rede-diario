@@ -26,7 +26,7 @@ export default async function GaleriaPage() {
       <Window title="Minha galeria" icon="image" headingLevel={1}>
         <div className="stack">
           <div className="row" style={{ justifyContent: 'space-between' }}>
-            <Link href="/meu-espaco">← Voltar para Meu espaço</Link>
+            <Link href="/meu-espaco/editar?aba=conteudos">← Voltar para Conteúdos</Link>
             <Link href="/criar/imagem" className="btn">
               <Icon name="plus" className="btn__icon" />
               Enviar fotos

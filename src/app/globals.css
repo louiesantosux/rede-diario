@@ -3543,3 +3543,41 @@ a.start-menu__item:focus-visible {
     height: 120px;
   }
 }
+
+/* Abas do Editar espaço */
+.edit-tabs {
+  display: grid;
+  gap: var(--space-2);
+}
+.edit-tabs__back {
+  justify-self: start;
+  font-weight: 600;
+}
+.edit-tabs ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--glass, var(--surface));
+}
+.edit-tabs li a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--text);
+}
+.edit-tabs li a[aria-current='page'] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.space-owner-bar .row {
+  flex-wrap: wrap;
+}
