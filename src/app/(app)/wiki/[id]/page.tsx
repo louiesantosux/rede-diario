@@ -7,6 +7,7 @@ import { WikiBlocks, type BlockPlaylist, type BlogPost } from '@/components/wiki
 import { WikiTabs } from '@/components/wiki/WikiTabs';
 import { BackgroundMusic } from '@/components/wiki/BackgroundMusic';
 import { Notice } from '@/components/Notice';
+import { NOTICES, pickMessage } from '@/lib/messages';
 import { sanitizePageSettings } from '@/lib/pageSettings';
 import { createClient } from '@/lib/supabase/server';
 import { blockMediaIds, blockPlaylistIds, sanitizeBlocks } from '@/lib/blocks';
@@ -102,9 +103,9 @@ export default async function WikiPage({ params, searchParams }: Props) {
         bodyStyle={themeStyle(theme)}
       >
         <div className="wiki-paper">
-          {(Array.isArray(sp.aviso) ? sp.aviso[0] : sp.aviso) === 'pagina-excluida' && (
+          {pickMessage(NOTICES, sp.aviso) && (
             <div style={{ marginBottom: 16 }}>
-              <Notice ok="Página excluída." />
+              <Notice ok={pickMessage(NOTICES, sp.aviso)} />
             </div>
           )}
           <header className="wiki-header">

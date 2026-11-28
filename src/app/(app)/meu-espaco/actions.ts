@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { docMediaIds, docText, MAX_INLINE_IMAGES, sanitizeDoc } from '@/lib/richtext';
 import { parseYouTubeId } from '@/lib/youtube';
@@ -127,7 +128,8 @@ export async function saveSpace(_prev: FormState, form: FormData): Promise<FormS
 
   revalidatePath('/meu-espaco');
   revalidatePath('/u/[username]', 'page');
-  return { ok: 'Espaço salvo.', username };
+  // Volta para Meu espaço (visualização), já mostrando o resultado.
+  redirect('/meu-espaco?aviso=espaco-salvo');
 }
 
 /* ------------------------------------------------------------------ */

@@ -134,7 +134,8 @@ export async function savePage(_prev: FormState, form: FormData): Promise<FormSt
     }
   }
   revalidatePath(`/wiki/${current.wiki_id}`);
-  return { ok: 'Página salva.' };
+  // Volta para a tela anterior (a própria página da wiki), já mostrando o resultado.
+  redirect(`/wiki/${current.wiki_id}?p=${pageId}&aviso=pagina-salva`);
 }
 
 export async function saveWikiSettings(_prev: FormState, form: FormData): Promise<FormState> {
@@ -164,7 +165,7 @@ export async function saveWikiSettings(_prev: FormState, form: FormData): Promis
     return { error: 'Não foi possível salvar. Tente novamente.' };
   }
   revalidatePath(`/wiki/${wikiId}`);
-  return { ok: 'Wiki atualizada.' };
+  redirect(`/wiki/${wikiId}?aviso=wiki-salva`);
 }
 
 export async function createPage(form: FormData) {

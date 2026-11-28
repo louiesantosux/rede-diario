@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { DEFAULT_PREFS, PREFS_KEY, THEME_OPTIONS, applyPrefs, type A11yPrefs, type ThemeId } from '@/lib/prefs';
 
@@ -11,6 +12,7 @@ const FONT_SCALES = [0.9, 1, 1.15, 1.3, 1.5, 1.75, 2];
 export function A11yPanel({ userId, saved }: Props) {
   const [prefs, setPrefs] = useState<A11yPrefs>(DEFAULT_PREFS);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const router = useRouter();
 
   // Prioridade: preferências da conta > preferências deste navegador > padrão.
   useEffect(() => {
@@ -40,7 +42,12 @@ export function A11yPanel({ userId, saved }: Props) {
       /* ignora */
     }
     const { error } = await createClient().from('profiles').update({ a11y_prefs: prefs }).eq('id', userId);
-    setStatus(error ? 'error' : 'saved');
+    if (error) {
+      setStatus('error');
+      return;
+    }
+    setStatus('saved');
+    router.push('/configuracoes?aviso=acessibilidade-salva');
   };
 
   const reset = () => {

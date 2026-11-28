@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ColorPicker } from '@/components/ColorPicker';
 import { contrastLevel, contrastRatio } from '@/lib/contrast';
@@ -36,6 +37,7 @@ export function SiteAppearance({ userId, savedUi, savedA11y }: Props) {
   const [ui, setUi] = useState<UiPrefs>(DEFAULT_UI);
   const [a11y, setA11y] = useState<A11yPrefs>(DEFAULT_PREFS);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const router = useRouter();
 
   useEffect(() => {
     const localUi = readLocal(UI_PREFS_KEY);
@@ -72,7 +74,13 @@ export function SiteAppearance({ userId, savedUi, savedA11y }: Props) {
   const save = async () => {
     setStatus('saving');
     const { error } = await createClient().from('profiles').update({ theme: ui, a11y_prefs: a11y }).eq('id', userId);
-    setStatus(error ? 'error' : 'saved');
+    if (error) {
+      setStatus('error');
+      return;
+    }
+    setStatus('saved');
+    // Volta para a tela anterior (Meu espaço).
+    router.push('/meu-espaco?aviso=aparencia-salva');
   };
 
   const reset = () => preview({ ...DEFAULT_UI });
