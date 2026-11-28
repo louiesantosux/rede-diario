@@ -109,7 +109,27 @@ export const BG_FIT_LABEL: Record<(typeof BG_FITS)[number], string> = {
   repetir: 'Repetir (mosaico)',
 };
 
+/** Fundos prontos (ilustrações próprias do site, em /public/fundos). */
+export const BACKDROPS: { id: string; label: string }[] = [
+  { id: 'ceu-aero', label: 'Céu Aero' },
+  { id: 'scene-queen', label: 'Oncinha roxa' },
+  { id: 'emo-rosa', label: 'Zebra rosa' },
+  { id: 'vermelho-gotico', label: 'Névoa vermelha' },
+  { id: 'adesivo-pb', label: 'Xadrez em perspectiva' },
+  { id: 'vampiro-azul', label: 'Floresta à noite' },
+  { id: 'sinal-suave', label: 'Circuito' },
+  { id: 'galaxia-glitter', label: 'Galáxia neon' },
+  { id: 'janela-7', label: 'Azul Windows 7' },
+  { id: 'oncinha-pink', label: 'Oncinha com glitter' },
+  { id: 'skin-cromado', label: 'Metal lilás' },
+  { id: 'papel-de-carta', label: 'Papel florido' },
+];
+export const backdropUrl = (id: string) => `/fundos/${id}.svg`;
+const isBackdrop = (v: unknown): v is string => typeof v === 'string' && BACKDROPS.some((b) => b.id === v);
+
 export type SpaceTheme = WikiTheme & {
+  /** Fundo pronto do tema. Uma imagem enviada pela pessoa tem prioridade. */
+  backdrop: string | null;
   window: (typeof WINDOW_STYLES)[number];
   /** Cor do padrão de fundo (oncinha, zebra, xadrez…). Vazio: um tom do texto. */
   patternColor: string | null;
@@ -126,6 +146,7 @@ export type SpaceTheme = WikiTheme & {
 export const DEFAULT_SPACE_THEME: SpaceTheme = {
   ...DEFAULT_THEME,
   window: 'aero',
+  backdrop: null,
   patternColor: null,
   linkColor: null,
   ornament: 'nenhum',
@@ -147,6 +168,7 @@ export function sanitizeSpaceTheme(raw: unknown): SpaceTheme {
   return {
     ...sanitizeTheme(r),
     window: pick(r.window, WINDOW_STYLES, DEFAULT_SPACE_THEME.window),
+    backdrop: isBackdrop(r.backdrop) ? r.backdrop : null,
     patternColor: typeof r.patternColor === 'string' && /^#[0-9a-f]{6}$/i.test(r.patternColor) ? r.patternColor.toLowerCase() : null,
     linkColor: typeof r.linkColor === 'string' && /^#[0-9a-f]{6}$/i.test(r.linkColor) ? r.linkColor.toLowerCase() : null,
     ornament: pick(r.ornament, ORNAMENTS, DEFAULT_SPACE_THEME.ornament),
@@ -171,7 +193,11 @@ export function spaceStyle(t: SpaceTheme, bgUrl?: string | null): CSSProperties 
     '--w-radius': RADIUS[t.corners],
     ...(t.patternColor ? { '--w-pat': t.patternColor } : {}),
     ...(t.linkColor ? { '--w-link': t.linkColor } : {}),
-    ...(bgUrl ? { '--space-bg-img': bgLayers(bgUrl, t.bgOpacity) } : {}),
+    ...(bgUrl
+      ? { '--space-bg-img': bgLayers(bgUrl, t.bgOpacity) }
+      : t.backdrop
+        ? { '--space-bg-img': bgLayers(backdropUrl(t.backdrop), t.bgOpacity) }
+        : {}),
   } as CSSProperties;
 }
 
@@ -181,7 +207,10 @@ export function bgLayers(url: string, opacity: number) {
   return `linear-gradient(rgba(0, 0, 0, ${shade}), rgba(0, 0, 0, ${shade})), url("${url.replace(/["\\]/g, '')}")`;
 }
 
-export function spaceClass(t: SpaceTheme, hasBg: boolean) {
+/** hasUserBg: a pessoa enviou uma imagem de fundo (senão vale o fundo pronto do tema, se houver). */
+export function spaceClass(t: SpaceTheme, hasUserBg: boolean) {
+  const hasBg = hasUserBg || Boolean(t.backdrop);
+  const fit = hasUserBg ? t.bgFit : 'cobrir';
   return [
     'space',
     'wiki-surface',
@@ -189,7 +218,7 @@ export function spaceClass(t: SpaceTheme, hasBg: boolean) {
     `wiki-font--${t.font}`,
     `space--${t.window}`,
     t.ornament !== 'nenhum' ? 'space--enfeites' : '',
-    hasBg ? `space--img space--img-${t.bgFit}` : '',
+    hasBg ? `space--img space--img-${fit}` : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -207,73 +236,73 @@ export const SPACE_THEMES: SpaceThemePreset[] = [
     id: 'ceu-aero',
     label: 'Céu Aero',
     hint: 'O padrão do site: Windows 7, vidro e céu.',
-    theme: { ...DEFAULT_THEME, patternColor: null, linkColor: null, window: 'aero', ornament: 'nenhum', corners: 'suaves' },
+    theme: { backdrop: 'ceu-aero', ...DEFAULT_THEME, patternColor: null, linkColor: null, window: 'aero', ornament: 'nenhum', corners: 'suaves' },
   },
   {
     id: 'scene-queen',
     label: 'Scene Queen',
     hint: 'Roxo com oncinha, caixas roxas e títulos pretos.',
-    theme: { bg: '#9d7bf0', surface: '#6a35c2', text: '#ffffff', accent: '#14101f', linkColor: '#ffe36e', pattern: 'oncinha', patternColor: '#5b3ba8', font: 'verdana', window: 'classico', ornament: 'caveiras', corners: 'retos' },
+    theme: { backdrop: 'scene-queen', bg: '#9d7bf0', surface: '#6a35c2', text: '#ffffff', accent: '#14101f', linkColor: '#ffe36e', pattern: 'oncinha', patternColor: '#5b3ba8', font: 'verdana', window: 'classico', ornament: 'caveiras', corners: 'retos' },
   },
   {
     id: 'emo-rosa',
     label: 'Emo rosa',
     hint: 'Preto com zebra rosa e caixas rosa-choque.',
-    theme: { bg: '#0c0c0c', surface: '#ff6cb8', text: '#1a0010', accent: '#0c0c0c', linkColor: '#3d0024', pattern: 'zebra', patternColor: '#ff2e93', font: 'verdana', window: 'classico', ornament: 'estrelas', corners: 'retos' },
+    theme: { backdrop: 'emo-rosa', bg: '#0c0c0c', surface: '#ff6cb8', text: '#1a0010', accent: '#0c0c0c', linkColor: '#3d0024', pattern: 'zebra', patternColor: '#ff2e93', font: 'verdana', window: 'classico', ornament: 'estrelas', corners: 'retos' },
   },
   {
     id: 'vermelho-gotico',
     label: 'Vermelho gótico',
     hint: 'Tudo preto, títulos vermelhos e brilho difuso.',
-    theme: { bg: '#000000', surface: '#0b0000', text: '#f5d6d6', accent: '#c40000', linkColor: '#ff6b6b', pattern: 'nenhum', patternColor: null, font: 'sistema', window: 'neon', ornament: 'nenhum', corners: 'retos' },
+    theme: { backdrop: 'vermelho-gotico', bg: '#000000', surface: '#0b0000', text: '#f5d6d6', accent: '#c40000', linkColor: '#ff6b6b', pattern: 'nenhum', patternColor: null, font: 'sistema', window: 'neon', ornament: 'nenhum', corners: 'retos' },
   },
   {
     id: 'adesivo-pb',
     label: 'Adesivo P&B',
     hint: 'Preto e branco, xadrez grande e contornos finos.',
-    theme: { bg: '#141414', surface: '#000000', text: '#f2f2f2', accent: '#f2f2f2', linkColor: null, pattern: 'xadrez-grande', patternColor: '#2c2c2c', font: 'pixel', window: 'adesivo', ornament: 'estrelas', corners: 'retos' },
+    theme: { backdrop: 'adesivo-pb', bg: '#141414', surface: '#000000', text: '#f2f2f2', accent: '#f2f2f2', linkColor: null, pattern: 'xadrez-grande', patternColor: '#2c2c2c', font: 'pixel', window: 'adesivo', ornament: 'estrelas', corners: 'retos' },
   },
   {
     id: 'vampiro-azul',
     label: 'Vampiro azul',
     hint: 'Floresta noturna, vidro escuro e estrelas.',
-    theme: { bg: '#0b1b22', surface: '#12303b', text: '#d3e9f0', accent: '#8cc4d6', linkColor: null, pattern: 'estrelas', patternColor: null, font: 'sistema', window: 'vidro-escuro', ornament: 'estrelas', corners: 'suaves' },
+    theme: { backdrop: 'vampiro-azul', bg: '#0b1b22', surface: '#12303b', text: '#d3e9f0', accent: '#8cc4d6', linkColor: null, pattern: 'estrelas', patternColor: null, font: 'sistema', window: 'vidro-escuro', ornament: 'estrelas', corners: 'suaves' },
   },
   {
     id: 'sinal-suave',
     label: 'Sinal suave',
     hint: 'Aparelho bege com visor verde e detalhes rosa.',
-    theme: { bg: '#1c2220', surface: '#e8e4cf', text: '#263020', accent: '#7aa62e', linkColor: '#a3245f', pattern: 'grade', patternColor: '#2c3631', font: 'pixel', window: 'aparelho', ornament: 'nenhum', corners: 'redondos' },
+    theme: { backdrop: 'sinal-suave', bg: '#1c2220', surface: '#e8e4cf', text: '#263020', accent: '#7aa62e', linkColor: '#a3245f', pattern: 'grade', patternColor: '#2c3631', font: 'pixel', window: 'aparelho', ornament: 'nenhum', corners: 'redondos' },
   },
   {
     id: 'galaxia-glitter',
     label: 'Galáxia glitter',
     hint: 'Preto com grade rosa, borda dupla neon e estrelas.',
-    theme: { bg: '#050005', surface: '#000000', text: '#ffffff', accent: '#ff3fb4', linkColor: null, pattern: 'grade', patternColor: '#4a0a36', font: 'pixel', window: 'neon', ornament: 'estrelas', corners: 'retos' },
+    theme: { backdrop: 'galaxia-glitter', bg: '#050005', surface: '#000000', text: '#ffffff', accent: '#ff3fb4', linkColor: null, pattern: 'grade', patternColor: '#4a0a36', font: 'pixel', window: 'neon', ornament: 'estrelas', corners: 'retos' },
   },
   {
     id: 'janela-7',
     label: 'Janela 7',
     hint: 'Página branca de navegador antigo sobre o azul do Windows 7.',
-    theme: { bg: '#2f86d8', surface: '#ffffff', text: '#222222', accent: '#4f9fae', linkColor: '#1d6fa5', pattern: 'feixes', patternColor: null, font: 'sistema', window: 'aero', ornament: 'brilhos', corners: 'suaves' },
+    theme: { backdrop: 'janela-7', bg: '#2f86d8', surface: '#ffffff', text: '#222222', accent: '#4f9fae', linkColor: '#1d6fa5', pattern: 'feixes', patternColor: null, font: 'sistema', window: 'aero', ornament: 'brilhos', corners: 'suaves' },
   },
   {
     id: 'oncinha-pink',
     label: 'Oncinha pink',
     hint: 'Rosa-choque com oncinha preta e caixas pretas.',
-    theme: { bg: '#ff2b9c', surface: '#0b0b0b', text: '#ffd3ec', accent: '#ff47b0', linkColor: null, pattern: 'oncinha', patternColor: '#0b0b0b', font: 'verdana', window: 'solida', ornament: 'coracoes', corners: 'suaves' },
+    theme: { backdrop: 'oncinha-pink', bg: '#ff2b9c', surface: '#0b0b0b', text: '#ffd3ec', accent: '#ff47b0', linkColor: null, pattern: 'oncinha', patternColor: '#0b0b0b', font: 'verdana', window: 'solida', ornament: 'coracoes', corners: 'suaves' },
   },
   {
     id: 'skin-cromado',
     label: 'Skin cromado',
     hint: 'Metal lilás de skin de XP, janelas com bisel.',
-    theme: { bg: '#8a90b4', surface: '#e7e9f3', text: '#1d2135', accent: '#3d4466', linkColor: null, pattern: 'bolhas', patternColor: '#a9aed0', font: 'sistema', window: 'cromado', ornament: 'nenhum', corners: 'suaves' },
+    theme: { backdrop: 'skin-cromado', bg: '#8a90b4', surface: '#e7e9f3', text: '#1d2135', accent: '#3d4466', linkColor: null, pattern: 'bolhas', patternColor: '#a9aed0', font: 'sistema', window: 'cromado', ornament: 'nenhum', corners: 'suaves' },
   },
   {
     id: 'papel-de-carta',
     label: 'Papel de carta',
     hint: 'Bege com listras, serifa e janelas de papel.',
-    theme: { bg: '#efe2c6', surface: '#fbf6ea', text: '#2a2318', accent: '#7a2e12', linkColor: null, pattern: 'listras', patternColor: null, font: 'serifa', window: 'papel', ornament: 'notas', corners: 'suaves' },
+    theme: { backdrop: 'papel-de-carta', bg: '#efe2c6', surface: '#fbf6ea', text: '#2a2318', accent: '#7a2e12', linkColor: null, pattern: 'listras', patternColor: null, font: 'serifa', window: 'papel', ornament: 'notas', corners: 'suaves' },
   },
 ];
 

@@ -139,6 +139,8 @@ export type SpaceMediaInput = {
   bg?: string | null;
   bgFit?: string;
   bgOpacity?: number;
+  /** Fundo pronto do site (id) ou null para nenhum. */
+  backdrop?: string | null;
 };
 
 export async function saveSpaceMedia(input: SpaceMediaInput): Promise<{ ok: boolean; error?: string }> {
@@ -152,13 +154,14 @@ export async function saveSpaceMedia(input: SpaceMediaInput): Promise<{ ok: bool
   if ('avatar' in input) patch.avatar_media_id = idOrNull(input.avatar);
   if ('bg' in input) patch.bg_media_id = idOrNull(input.bg);
 
-  if ('bgFit' in input || 'bgOpacity' in input) {
+  if ('bgFit' in input || 'bgOpacity' in input || 'backdrop' in input) {
     const { data: current } = await supabase.from('spaces').select('theme').eq('owner_id', userId).maybeSingle();
     const theme = sanitizeSpaceTheme(current?.theme);
     if ('bgFit' in input && (BG_FITS as readonly string[]).includes(String(input.bgFit))) {
       theme.bgFit = input.bgFit as SpaceTheme['bgFit'];
     }
     if ('bgOpacity' in input) theme.bgOpacity = clampOpacity(input.bgOpacity);
+    if ('backdrop' in input) theme.backdrop = sanitizeSpaceTheme({ backdrop: input.backdrop }).backdrop;
     patch.theme = theme;
   }
   if (Object.keys(patch).length === 0) return { ok: true };

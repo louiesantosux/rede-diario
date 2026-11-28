@@ -29,7 +29,7 @@ import {
 } from '@/lib/space';
 import { BG_MUSIC_MAX_VOLUME } from '@/lib/pageSettings';
 import { saveSpace, saveSpaceMedia, type FormState, type SpaceMediaInput } from '../actions';
-import { ORNAMENTS, ORNAMENT_LABEL, SPACE_THEMES, bgLayers, spaceChecks } from '@/lib/space';
+import { BACKDROPS, ORNAMENTS, ORNAMENT_LABEL, SPACE_THEMES, backdropUrl, bgLayers, spaceChecks } from '@/lib/space';
 import { ModuleList } from './ModuleList';
 
 type Props = {
@@ -221,10 +221,14 @@ export function SpaceEditor(props: Props) {
           </div>
           <div className="stack">
             <p className="space-media-pick__title">Imagem de fundo</p>
-            {bg?.url ? (
+            {bg?.url || theme.backdrop ? (
               <div
-                className={`space-bg-preview${theme.bgFit === 'repetir' ? ' space-bg-preview--repetir' : ''}`}
-                style={{ '--space-bg-img': bgLayers(bg.url, theme.bgOpacity) } as CSSProperties}
+                className={`space-bg-preview${bg?.url && theme.bgFit === 'repetir' ? ' space-bg-preview--repetir' : ''}`}
+                style={
+                  {
+                    '--space-bg-img': bgLayers(bg?.url || backdropUrl(theme.backdrop as string), theme.bgOpacity),
+                  } as CSSProperties
+                }
                 role="img"
                 aria-label={`Prévia do fundo com ${theme.bgOpacity}% de opacidade sobre preto`}
               >
@@ -245,7 +249,42 @@ export function SpaceEditor(props: Props) {
                 </button>
               )}
             </div>
-            {bg && (
+            <fieldset className="choice-group">
+              <legend>Fundos prontos</legend>
+              <div className="backdrop-row">
+                <button
+                  type="button"
+                  className="backdrop-chip backdrop-chip--none"
+                  aria-pressed={!bg && !theme.backdrop}
+                  onClick={() => {
+                    setTheme((t) => ({ ...t, backdrop: null }));
+                    void persistMedia({ backdrop: null }, 'Sem fundo pronto: vale a cor e o padrão.');
+                  }}
+                >
+                  Nenhum
+                </button>
+                {BACKDROPS.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    className="backdrop-chip"
+                    aria-pressed={!bg && theme.backdrop === b.id}
+                    title={b.label}
+                    onClick={() => {
+                      setTheme((t) => ({ ...t, backdrop: b.id }));
+                      setBg(null);
+                      void persistMedia({ backdrop: b.id, bg: null }, `Fundo “${b.label}” salvo.`);
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={backdropUrl(b.id)} alt="" loading="lazy" />
+                    <span className="sr-only">{b.label}</span>
+                  </button>
+                ))}
+              </div>
+              <small className="muted">Uma imagem enviada por você tem prioridade sobre o fundo pronto.</small>
+            </fieldset>
+            {(bg || theme.backdrop) && (
               <>
                 <div className="field">
                   <label htmlFor="bgOpacity">
@@ -265,6 +304,7 @@ export function SpaceEditor(props: Props) {
                     O fundo por trás da imagem é preto (#000000): quanto menor a opacidade, mais escura ela fica.
                   </small>
                 </div>
+                {bg && (
                 <div className="field">
                   <label htmlFor="bgFit">Como mostrar</label>
                   <select
@@ -279,6 +319,7 @@ export function SpaceEditor(props: Props) {
                     ))}
                   </select>
                 </div>
+                )}
               </>
             )}
           </div>
@@ -341,6 +382,11 @@ export function SpaceEditor(props: Props) {
                         aria-pressed={activePreset === p.id}
                         onClick={() => {
                           setTheme((t) => ({ ...t, ...p.theme }));
+                          // O tema traz o próprio fundo: a imagem enviada sai (volta a valer ao escolhê-la de novo).
+                          if (bg) {
+                            setBg(null);
+                            setMediaStatus('O fundo do tema substituiu sua imagem de fundo. Salve o espaço para confirmar.');
+                          }
                           setDirty(true);
                         }}
                       >
@@ -408,7 +454,7 @@ export function SpaceEditor(props: Props) {
                   id="pattern"
                   value={theme.pattern}
                   onChange={(e) => set('pattern', e.target.value as SpaceTheme['pattern'])}
-                  aria-describedby={bg ? 'pattern-help' : undefined}
+                  aria-describedby={bg || theme.backdrop ? 'pattern-help' : undefined}
                 >
                   {PATTERNS.map((p) => (
                     <option key={p} value={p}>
@@ -428,9 +474,9 @@ export function SpaceEditor(props: Props) {
                 </select>
               </div>
             </div>
-            {bg && (
+            {(bg || theme.backdrop) && (
               <small id="pattern-help" className="muted">
-                Com imagem de fundo, o padrão fica escondido atrás dela.
+                Com imagem de fundo (sua ou do tema), o padrão fica escondido atrás dela.
               </small>
             )}
 

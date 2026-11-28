@@ -3581,3 +3581,38 @@ a.start-menu__item:focus-visible {
 .space-owner-bar .row {
   flex-wrap: wrap;
 }
+
+/* Fundos prontos */
+.backdrop-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 6px;
+}
+.backdrop-chip {
+  aspect-ratio: 16 / 10;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  cursor: pointer;
+}
+.backdrop-chip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.backdrop-chip--none {
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.backdrop-chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--glow);
+}
+.theme-card__preview.space--img-cobrir {
+  background-attachment: scroll;
+}
