@@ -367,8 +367,7 @@ export function SpaceEditor(props: Props) {
       </Window>
 
       <Window title="Aparência" icon="star">
-        <div className="theme-editor">
-          <div className="stack">
+        <div className="stack">
             <fieldset className="choice-group">
               <legend>Temas prontos</legend>
               <ul className="theme-gallery">
@@ -413,6 +412,28 @@ export function SpaceEditor(props: Props) {
                 para ajustar tudo abaixo.
               </small>
             </fieldset>
+
+            <div className="space-preview-sticky" role="region" aria-label="Prévia da aparência">
+              <p className="muted" style={{ margin: '0 0 6px', fontSize: '0.875rem' }}>
+                Prévia: muda na hora conforme você ajusta as opções abaixo
+              </p>
+              <div className={`${spaceClass(theme, Boolean(bg?.url))} wiki-preview space--preview`} style={spaceStyle(theme, bg?.url)}>
+                <SpaceOrnaments ornament={theme.ornament} scale={0.7} />
+                <div className="space-box">
+                  <div className="space-box__title">
+                    <span>Sobre mim</span>
+                  </div>
+                  <div className="space-box__body">
+                    <p style={{ margin: '0 0 8px' }}>
+                      Um texto de exemplo com um <a href="#previa">link destacado</a>.
+                    </p>
+                    <p className="space-muted" style={{ margin: 0 }}>
+                      Humor: {props.profile.mood || 'tranquilo'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <fieldset className="choice-group">
               <legend>Cores</legend>
@@ -568,29 +589,6 @@ export function SpaceEditor(props: Props) {
                 </p>
               )}
             </div>
-          </div>
-
-          <div>
-            <p className="muted" style={{ margin: '0 0 6px', fontSize: '0.875rem' }}>
-              Prévia
-            </p>
-            <div className={`${spaceClass(theme, Boolean(bg?.url))} wiki-preview space--preview`} style={spaceStyle(theme, bg?.url)}>
-              <SpaceOrnaments ornament={theme.ornament} scale={0.7} />
-              <div className="space-box">
-                <div className="space-box__title">
-                  <span>Sobre mim</span>
-                </div>
-                <div className="space-box__body">
-                  <p style={{ margin: '0 0 8px' }}>
-                    Um texto de exemplo com um <a href="#previa">link destacado</a>.
-                  </p>
-                  <p className="space-muted" style={{ margin: 0 }}>
-                    Humor: {props.profile.mood || 'tranquilo'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </Window>
 

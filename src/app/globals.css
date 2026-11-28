@@ -3616,3 +3616,33 @@ a.start-menu__item:focus-visible {
 .theme-card__preview.space--img-cobrir {
   background-attachment: scroll;
 }
+
+/* Editar espaço: coluna da foto alinhada ao topo (sem espaço vazio) */
+.space-media-pick {
+  align-items: start;
+}
+.space-media-pick > .stack {
+  align-content: start;
+}
+
+/* Prévia da aparência acima dos controles, presa no topo enquanto se ajusta */
+.space-preview-sticky {
+  position: sticky;
+  top: 8px;
+  z-index: 3;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 6px 18px var(--shadow);
+}
+.space-preview-sticky .space--preview {
+  max-height: 220px;
+  overflow: hidden;
+}
+@media (max-width: 720px), (max-height: 700px) {
+  .space-preview-sticky {
+    position: static;
+    box-shadow: none;
+    padding: 0;
+  }
+}
